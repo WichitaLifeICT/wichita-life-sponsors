@@ -76,12 +76,15 @@ without your go-ahead.
 - [x] Filters (slot type, newsletter/social, open/filled) + view toggle
 - [x] Verified: tests, typecheck, lint, production build pass
 
-## Stage 9 — Billing & payments
-- [ ] Billing dashboard
-- [ ] Invoice table + create/edit/send/void
-- [ ] Record partial/full payment; auto status by payments + due date
-- [ ] Frequency-aware payment status (no false "unpaid" for quarterly/annual)
-- [ ] Tests (full/partial/over/overdue/void/quarterly/annual)
+## Stage 9 — Billing (simplified per owner: value + mark paid per period, no invoicing)
+- [x] Billing overview (contracted monthly, collected, outstanding, sponsors with balance)
+- [x] Per-sponsor period ledger generated from contract start + frequency (monthly/quarterly/annual/one-time)
+- [x] Mark each period paid/unpaid (stamps paid date); editable amount per period
+- [x] Frequency-aware periods (quarterly/annual don't show false monthly "unpaid")
+- [x] "Payments up to date / N unpaid" standing on sponsor Overview + Billing tab
+- [x] Stripe payment method + subscription flag
+- [x] Period-generation unit tests (7); 28 tests total; typecheck, lint, build pass
+- [ ] (Later) Stripe API sync — deferred
 
 ## Stage 10 — Dashboard
 - [ ] Summary cards (real data)

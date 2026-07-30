@@ -12,6 +12,8 @@ import {
 } from "lucide-react";
 
 import { getSponsorDetail } from "@/lib/data/sponsors";
+import { getSponsorBilling } from "@/lib/data/billing";
+import { PaymentStandingBadge } from "@/components/billing/payment-status-badge";
 import { PageHeader } from "@/components/layout/page-header";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -31,10 +33,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import {
-  SponsorStatusBadge,
-  PaymentStatusBadge,
-} from "@/components/sponsors/badges";
+import { SponsorStatusBadge } from "@/components/sponsors/badges";
 import { ArchiveSponsorDialog } from "@/components/sponsors/archive-sponsor-dialog";
 import { formatCurrency, formatDate, formatMonth, humanize } from "@/lib/format";
 import { deliverableTypeLabel } from "@/lib/labels";
@@ -64,7 +63,10 @@ export default async function SponsorDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const detail = await getSponsorDetail(id);
+  const [detail, billing] = await Promise.all([
+    getSponsorDetail(id),
+    getSponsorBilling(id),
+  ]);
   if (!detail) notFound();
 
   const {
@@ -78,10 +80,12 @@ export default async function SponsorDetailPage({
     upcoming,
     invoices,
     payments,
-    paymentStatus,
     assets,
     isCustomized,
   } = detail;
+
+  const unpaidPeriods = billing?.rows.filter((r) => !r.paid) ?? [];
+  const hasPeriods = (billing?.rows.length ?? 0) > 0;
 
   return (
     <div className="space-y-6">
@@ -152,7 +156,10 @@ export default async function SponsorDetailPage({
 
       <div className="flex flex-wrap items-center gap-2">
         <SponsorStatusBadge status={sponsor.status} />
-        <PaymentStatusBadge status={paymentStatus} />
+        <PaymentStandingBadge
+          hasPeriods={hasPeriods}
+          unpaidCount={unpaidPeriods.length}
+        />
         {isCustomized && (
           <Badge variant="warning">
             <Sparkles className="mr-1 size-3" />
@@ -184,6 +191,21 @@ export default async function SponsorDetailPage({
                 <Fact label="Package">{pkg?.name ?? "—"}</Fact>
                 <Fact label="Monthly value">
                   {monthlyValue > 0 ? formatCurrency(monthlyValue) : "—"}
+                </Fact>
+                <Fact label="Payments">
+                  {!hasPeriods ? (
+                    "—"
+                  ) : unpaidPeriods.length === 0 ? (
+                    <span className="text-success">Up to date</span>
+                  ) : (
+                    <Link
+                      href={`/billing/${id}`}
+                      className="text-warning hover:underline"
+                    >
+                      {unpaidPeriods.length} unpaid ·{" "}
+                      {formatCurrency(billing?.outstanding ?? 0)}
+                    </Link>
+                  )}
                 </Fact>
                 <Fact label="Billing frequency">
                   {humanize(sponsor.billing_frequency)}
@@ -341,6 +363,27 @@ export default async function SponsorDetailPage({
         {/* Billing */}
         <TabsContent value="billing">
           <div className="space-y-4">
+            <Card>
+              <CardContent className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <p className="font-medium">Payment periods</p>
+                  <p className="text-sm text-muted-foreground">
+                    {!hasPeriods
+                      ? "No periods yet — set a contract start date."
+                      : unpaidPeriods.length === 0
+                        ? "Up to date on all periods."
+                        : `${unpaidPeriods.length} unpaid · ${formatCurrency(billing?.outstanding ?? 0)} outstanding`}
+                  </p>
+                </div>
+                <Button asChild size="sm">
+                  <Link href={`/billing/${id}`}>
+                    <CircleDollarSign className="size-4" />
+                    Manage payment periods
+                  </Link>
+                </Button>
+              </CardContent>
+            </Card>
+
             <Card>
               <CardHeader>
                 <CardTitle className="text-base">Invoices</CardTitle>
