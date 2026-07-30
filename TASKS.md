@@ -87,9 +87,12 @@ without your go-ahead.
 - [ ] (Later) Stripe API sync — deferred
 
 ## Stage 10 — Dashboard
-- [ ] Summary cards (real data)
-- [ ] Needs attention / This week / Monthly fulfillment / Revenue sections
-- [ ] Month selector; every card clickable to filtered view
+- [x] 8 summary cards (real data): active sponsors, contracted monthly, outstanding,
+      due this week, unscheduled, missing assets, expiring ≤60d, open ad spots — all clickable
+- [x] Needs attention (past due, unpaid, missing assets, expiring, no-package sponsors)
+- [x] This week (content going out + deliverables due) / Monthly fulfillment / Revenue
+- [x] Month selector; cards deep-link to filtered views
+- [x] Verified: tests, typecheck, lint, production build pass
 
 ## Stage 11 — Asset management
 - [ ] Supabase Storage (private), signed URLs
