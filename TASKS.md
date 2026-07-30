@@ -45,11 +45,13 @@ without your go-ahead.
 - [x] Verified: typecheck, lint, production build pass
 
 ## Stage 5 — Packages + overrides
-- [ ] Package list / create / edit / deactivate / duplicate
-- [ ] Deliverable rules editor
-- [ ] Sponsor package assignment with overrides (price, add/remove/qty, auto-generate flag)
-- [ ] Clear "customized package" indicator
-- [ ] Package edits never rewrite historical deliverables
+- [x] Package list / create / edit / deactivate / duplicate
+- [x] Deliverable rules editor (dynamic rows)
+- [x] Sponsor customization page: override quantities, add/remove, price, auto-generate flag
+- [x] Clear "customized package" indicator (sponsor badge + effective-deliverable resolution)
+- [x] Package edits only affect future generation (rules replaced, deliverables untouched)
+- [x] `resolveEffectiveDeliverables` domain logic + unit tests (13 tests total)
+- [x] Verified: tests, typecheck, lint, production build pass
 
 ## Stage 6 — Monthly deliverable generation
 - [ ] Generation button + month selector + preview

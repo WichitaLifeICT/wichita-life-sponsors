@@ -8,6 +8,7 @@ import {
   CircleDollarSign,
   Upload,
   Sparkles,
+  Boxes,
 } from "lucide-react";
 
 import { getSponsorDetail } from "@/lib/data/sponsors";
@@ -67,6 +68,7 @@ export default async function SponsorDetailPage({
 
   const {
     sponsor,
+    subscription,
     pkg,
     monthlyValue,
     serviceMonth,
@@ -95,6 +97,14 @@ export default async function SponsorDetailPage({
                 Edit
               </Link>
             </Button>
+            {subscription && pkg && (
+              <Button asChild variant="outline" size="sm">
+                <Link href={`/sponsors/${id}/package`}>
+                  <Boxes className="size-4" />
+                  Customize package
+                </Link>
+              </Button>
+            )}
             <Button
               variant="outline"
               size="sm"
