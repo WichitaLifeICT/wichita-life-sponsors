@@ -26,12 +26,14 @@ without your go-ahead.
 - [x] Verified: `typecheck`, `lint`, `test`, production `build` all pass
 
 ## Stage 3 — Auth + app shell
-- [ ] Login page (email/password)
-- [ ] Middleware route protection + redirect to login
-- [ ] Responsive sidebar (Dashboard, Sponsors, Deliverables, Calendar, Packages, Billing, Assets, Settings)
-- [ ] Org name (top) + user + logout (bottom)
-- [ ] Loading / empty / error states
-- [ ] README auth section
+- [x] Login page (email/password) via Supabase Auth server action
+- [x] Proxy route protection + redirect to login (smoke-tested: 307 redirects work)
+- [x] Responsive sidebar (all 8 nav items) — desktop rail + mobile sheet
+- [x] Org name (top) + user menu + logout (bottom)
+- [x] Loading / empty / error states (skeleton, EmptyState, error boundary)
+- [x] shadcn/ui primitives authored locally (button, input, card, avatar, dropdown, sheet, badge, skeleton, separator, label)
+- [x] README auth section
+- [x] Verified: typecheck, lint, build, and runtime route smoke test all pass
 
 ## Stage 4 — Sponsors
 - [ ] Sponsor list with columns, search, filters, sorting, pagination
