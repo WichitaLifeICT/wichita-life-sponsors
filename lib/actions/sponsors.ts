@@ -120,7 +120,12 @@ export async function createSponsor(
     .single();
 
   if (error || !inserted) {
-    return { error: "Could not create the sponsor. Please try again." };
+    console.error("createSponsor failed:", error);
+    return {
+      error: error?.message
+        ? `Could not create the sponsor: ${error.message}`
+        : "Could not create the sponsor. Please try again.",
+    };
   }
 
   await syncSubscription(supabase, session.organization.id, inserted.id, parsed.data);
@@ -150,7 +155,12 @@ export async function updateSponsor(
   const { error } = await supabase.from("sponsors").update(row).eq("id", id);
 
   if (error) {
-    return { error: "Could not save changes. Please try again." };
+    console.error("updateSponsor failed:", error);
+    return {
+      error: error.message
+        ? `Could not save changes: ${error.message}`
+        : "Could not save changes. Please try again.",
+    };
   }
 
   await syncSubscription(supabase, session.organization.id, id, parsed.data);
