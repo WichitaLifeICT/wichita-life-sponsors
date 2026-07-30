@@ -1,5 +1,19 @@
 import { humanize } from "@/lib/format";
-import type { DeliverableStatus } from "@/types/database";
+import type { DeliverableStatus, SlotType } from "@/types/database";
+
+/** Content slot types (value + label). Client-safe (no server imports). */
+export const SLOT_TYPE_OPTIONS: readonly (readonly [SlotType, string])[] = [
+  ["newsletter", "Newsletter (email)"],
+  ["dedicated_email", "Dedicated email"],
+  ["instagram_post", "Instagram post"],
+  ["instagram_story", "Instagram story"],
+  ["instagram_reel", "Instagram reel"],
+  ["facebook_post", "Facebook post"],
+  ["podcast", "Podcast"],
+  ["website", "Website"],
+  ["event", "Event"],
+  ["custom", "Custom"],
+] as const;
 
 /** All deliverable statuses in workflow order. Client-safe (no server imports). */
 export const DELIVERABLE_STATUSES: DeliverableStatus[] = [

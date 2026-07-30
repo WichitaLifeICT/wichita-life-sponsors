@@ -69,10 +69,12 @@ without your go-ahead.
 - [x] Verified: tests, typecheck, lint, production build pass
 
 ## Stage 8 — Content calendar & inventory
-- [ ] Month / week / agenda views
-- [ ] Slot CRUD, capacity states (empty/partial/full/overbooked)
-- [ ] Assign/reschedule deliverables, capacity guard with override
-- [ ] Filters
+- [x] Month + agenda views (week view = follow-up)
+- [x] Slot CRUD, capacity states (empty/partial/full/overbooked) color-coded
+- [x] Assign/reschedule/unassign deliverables; sets scheduled date + status; capacity guard with overbook override
+- [x] Unscheduled-this-month panel beside the calendar
+- [x] Filters (slot type, newsletter/social, open/filled) + view toggle
+- [x] Verified: tests, typecheck, lint, production build pass
 
 ## Stage 9 — Billing & payments
 - [ ] Billing dashboard
