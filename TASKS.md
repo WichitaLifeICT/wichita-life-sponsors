@@ -126,3 +126,10 @@ without your go-ahead.
 - [ ] Pre-launch + security checklist (RLS, secrets, no service-role in browser)
 - [ ] Vercel deployment instructions
 - [ ] Full README + `USER_GUIDE.md`
+
+## Bonus — Distribution (wholesale & consignment) — owner request
+- [x] Schema: locations, products, drop-offs, line items (migration 20260101000007) + RLS
+- [x] Wholesale (# units × wholesale $/unit, mark paid) and consignment (record sold, your % cut, units on shelf, settle)
+- [x] Distribution section: summary cards + Drop-offs / Products / Locations tabs
+- [x] New drop-off with item editor; drop-off detail with sales recording
+- [x] Distribution value math + 5 unit tests

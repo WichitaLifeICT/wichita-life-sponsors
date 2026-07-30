@@ -6,6 +6,7 @@ import {
   Boxes,
   Receipt,
   FolderOpen,
+  Truck,
   Settings,
   type LucideIcon,
 } from "lucide-react";
@@ -27,6 +28,7 @@ export const NAV_ITEMS: NavItem[] = [
   { title: "Calendar", href: "/calendar", icon: CalendarDays },
   { title: "Packages", href: "/packages", icon: Boxes },
   { title: "Billing", href: "/billing", icon: Receipt },
+  { title: "Distribution", href: "/distribution", icon: Truck },
   { title: "Assets", href: "/assets", icon: FolderOpen },
   { title: "Settings", href: "/settings", icon: Settings },
 ];

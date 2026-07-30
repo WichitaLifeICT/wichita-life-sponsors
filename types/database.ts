@@ -240,6 +240,69 @@ export interface Payment {
   created_at: string;
 }
 
+export type DistributionDealType = "wholesale" | "consignment";
+export type DistributionProductCategory =
+  | "puzzle" | "hat" | "apparel" | "print" | "other";
+
+export interface DistributionLocation {
+  id: string;
+  organization_id: string;
+  name: string;
+  contact_name: string | null;
+  contact_email: string | null;
+  phone: string | null;
+  address: string | null;
+  notes: string | null;
+  is_demo: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface DistributionProduct {
+  id: string;
+  organization_id: string;
+  name: string;
+  category: DistributionProductCategory;
+  retail_price: number;
+  wholesale_price: number;
+  active: boolean;
+  is_demo: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface DistributionDropoff {
+  id: string;
+  organization_id: string;
+  location_id: string;
+  deal_type: DistributionDealType;
+  delivered_date: string;
+  consignment_rate: number;
+  paid: boolean;
+  paid_date: string | null;
+  settled: boolean;
+  notes: string | null;
+  is_demo: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface DistributionDropoffItem {
+  id: string;
+  organization_id: string;
+  dropoff_id: string;
+  product_id: string | null;
+  product_name: string;
+  quantity: number;
+  unit_wholesale_price: number;
+  unit_retail_price: number;
+  quantity_sold: number;
+  quantity_returned: number;
+  is_demo: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface SponsorAsset {
   id: string;
   organization_id: string;
