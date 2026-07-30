@@ -55,6 +55,19 @@ export function formatMonthShort(date: string | null | undefined): string {
   return formatDate(date, "MMM yyyy");
 }
 
+/** Human-readable file size, e.g. 1536 -> "1.5 KB". */
+export function formatFileSize(bytes: number | null | undefined): string {
+  if (!bytes || bytes <= 0) return "—";
+  const units = ["B", "KB", "MB", "GB"];
+  let n = bytes;
+  let u = 0;
+  while (n >= 1024 && u < units.length - 1) {
+    n /= 1024;
+    u++;
+  }
+  return `${n.toFixed(u === 0 ? 0 : 1)} ${units[u]}`;
+}
+
 /** Turn an enum value like "newsletter_placement" into "Newsletter placement". */
 export function humanize(value: string | null | undefined): string {
   if (!value) return "—";

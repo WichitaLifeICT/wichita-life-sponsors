@@ -95,10 +95,12 @@ without your go-ahead.
 - [x] Verified: tests, typecheck, lint, production build pass
 
 ## Stage 11 — Asset management
-- [ ] Supabase Storage (private), signed URLs
-- [ ] Assets page, filters, upload from sponsor page, previews
-- [ ] Size/type validation, org isolation, delete confirmation
-- [ ] Link assets to deliverables; asset status control
+- [x] Supabase Storage (private bucket) + org-scoped policies + signed URLs (migration 20260101000008)
+- [x] Assets page with sponsor/type filters, image previews, file type/size/date
+- [x] Upload from sponsor Assets tab (file or external link); size/type validation
+- [x] Org isolation via storage path + RLS; delete with confirmation
+- [x] Asset status control already on deliverable detail (not_needed/missing/partial/received)
+- [x] Verified: tests, typecheck, lint, production build pass
 
 ## Stage 12 — In-app alerts
 - [ ] Alert rules + notification center

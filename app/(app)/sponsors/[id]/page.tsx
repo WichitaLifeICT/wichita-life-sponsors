@@ -13,7 +13,11 @@ import {
 
 import { getSponsorDetail } from "@/lib/data/sponsors";
 import { getSponsorBilling } from "@/lib/data/billing";
+import { getSponsorAssets } from "@/lib/data/assets";
+import { getSessionContext } from "@/lib/data/session";
 import { PaymentStandingBadge } from "@/components/billing/payment-status-badge";
+import { AssetUploader } from "@/components/assets/asset-uploader";
+import { AssetGrid } from "@/components/assets/asset-grid";
 import { PageHeader } from "@/components/layout/page-header";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -63,11 +67,14 @@ export default async function SponsorDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const [detail, billing] = await Promise.all([
+  const [detail, billing, session, sponsorAssets] = await Promise.all([
     getSponsorDetail(id),
     getSponsorBilling(id),
+    getSessionContext(),
+    getSponsorAssets(id),
   ]);
   if (!detail) notFound();
+  const orgId = session?.organization?.id;
 
   const {
     sponsor,
@@ -80,7 +87,6 @@ export default async function SponsorDetailPage({
     upcoming,
     invoices,
     payments,
-    assets,
     isCustomized,
   } = detail;
 
@@ -484,27 +490,19 @@ export default async function SponsorDetailPage({
         {/* Assets */}
         <TabsContent value="assets">
           <Card>
-            <CardHeader>
+            <CardHeader className="flex-row items-center justify-between space-y-0">
               <CardTitle className="text-base">Assets</CardTitle>
+              {orgId && <AssetUploader sponsorId={id} orgId={orgId} />}
             </CardHeader>
             <CardContent>
-              {assets.length === 0 ? (
+              {sponsorAssets.length === 0 ? (
                 <EmptyState
                   icon={Upload}
                   title="No assets yet"
-                  description="Logos, photos, contracts, and other files will appear here. Uploading ships in a later stage."
+                  description="Upload logos, photos, contracts, ad copy, and more — or add an external link."
                 />
               ) : (
-                <ul className="divide-y text-sm">
-                  {assets.map((a) => (
-                    <li key={a.id} className="flex justify-between gap-3 py-2">
-                      <span className="font-medium">{a.name ?? "Untitled"}</span>
-                      <span className="text-muted-foreground">
-                        {humanize(a.asset_type)}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
+                <AssetGrid assets={sponsorAssets} />
               )}
             </CardContent>
           </Card>
