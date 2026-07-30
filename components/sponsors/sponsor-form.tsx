@@ -44,6 +44,7 @@ export interface SponsorFormDefaults {
   monthly_price?: string;
   billing_frequency?: string;
   payment_method?: string;
+  stripe_subscription?: boolean;
   package_id?: string;
   custom_monthly_price?: string;
   auto_generate_deliverables?: boolean;
@@ -67,6 +68,7 @@ const FREQUENCY = [
 
 const PAYMENT_METHOD = [
   ["", "Not set"],
+  ["stripe", "Stripe"],
   ["ach", "ACH / bank transfer"],
   ["credit_card", "Credit card"],
   ["check", "Check"],
@@ -286,6 +288,17 @@ export function SponsorForm({
               </SelectContent>
             </Select>
             <input type="hidden" name="payment_method" value={paymentMethod} />
+            {paymentMethod === "stripe" && (
+              <label className="flex items-center gap-2 pt-1 text-sm">
+                <input
+                  type="checkbox"
+                  name="stripe_subscription"
+                  defaultChecked={defaults.stripe_subscription ?? false}
+                  className="size-4 rounded border-input"
+                />
+                Recurring Stripe subscription
+              </label>
+            )}
           </div>
         </CardContent>
       </Card>
@@ -304,6 +317,7 @@ export function SponsorForm({
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="none">No package</SelectItem>
+                <SelectItem value="custom">Custom (à la carte)</SelectItem>
                 {packages.map((p) => (
                   <SelectItem key={p.id} value={p.id}>
                     {p.name}
@@ -313,8 +327,10 @@ export function SponsorForm({
             </Select>
             <input type="hidden" name="package_id" value={packageId} />
             <p className="text-xs text-muted-foreground">
-              Assigning a package creates an active subscription. Detailed
-              per-sponsor overrides are managed in the Packages section.
+              Pick a package, or choose <strong>Custom (à la carte)</strong> to
+              build any mix of deliverables. Then use{" "}
+              <strong>Manage deliverables</strong> on the sponsor to set the exact
+              list (e.g. 2 emails, or 2 emails + 1 social, or an event banner).
             </p>
           </div>
           <div className="space-y-2">

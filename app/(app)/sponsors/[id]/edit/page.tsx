@@ -44,7 +44,10 @@ export default async function EditSponsorPage({
     monthly_price: num(sponsor.monthly_price),
     billing_frequency: sponsor.billing_frequency,
     payment_method: sponsor.payment_method ?? "",
-    package_id: subscription?.package_id ?? "none",
+    stripe_subscription: sponsor.stripe_subscription,
+    package_id: subscription
+      ? subscription.package_id ?? "custom"
+      : "none",
     custom_monthly_price: num(subscription?.custom_monthly_price),
     auto_generate_deliverables:
       subscription?.auto_generate_deliverables ?? true,

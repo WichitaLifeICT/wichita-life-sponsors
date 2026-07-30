@@ -98,11 +98,11 @@ export default async function SponsorDetailPage({
                 Edit
               </Link>
             </Button>
-            {subscription && pkg && (
+            {subscription && (
               <Button asChild variant="outline" size="sm">
                 <Link href={`/sponsors/${id}/package`}>
                   <Boxes className="size-4" />
-                  Customize package
+                  Manage deliverables
                 </Link>
               </Button>
             )}
@@ -189,7 +189,14 @@ export default async function SponsorDetailPage({
                   {humanize(sponsor.billing_frequency)}
                 </Fact>
                 <Fact label="Payment method">
-                  {humanize(sponsor.payment_method) || "—"}
+                  {sponsor.payment_method
+                    ? `${humanize(sponsor.payment_method)}${
+                        sponsor.payment_method === "stripe" &&
+                        sponsor.stripe_subscription
+                          ? " · subscription"
+                          : ""
+                      }`
+                    : "—"}
                 </Fact>
                 <Fact label="Contract start">
                   {formatDate(sponsor.contract_start_date)}

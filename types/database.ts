@@ -39,7 +39,8 @@ export type SlotType =
 export type InvoiceStatus =
   | "not_created" | "draft" | "sent" | "partially_paid" | "paid" | "overdue" | "void";
 
-export type PaymentMethod = "ach" | "credit_card" | "check" | "cash" | "other";
+export type PaymentMethod =
+  | "ach" | "credit_card" | "check" | "cash" | "stripe" | "other";
 
 export type SponsorAssetType =
   | "logo" | "photo" | "brand_guide" | "ad_copy" | "contract" | "invoice" | "report" | "other";
@@ -80,6 +81,7 @@ export interface Sponsor {
   monthly_price: number | null;
   billing_frequency: BillingFrequency;
   payment_method: PaymentMethod | null;
+  stripe_subscription: boolean;
   logo_url: string | null;
   is_demo: boolean;
   created_at: string;

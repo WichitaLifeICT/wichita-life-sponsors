@@ -15,10 +15,14 @@ export interface SponsorActionState {
 
 function parseForm(formData: FormData) {
   const raw = Object.fromEntries(formData.entries());
-  // Checkbox: present only when checked.
+  // Checkboxes: present only when checked.
   raw.auto_generate_deliverables = String(
     formData.get("auto_generate_deliverables") === "on" ||
       formData.get("auto_generate_deliverables") === "true",
+  );
+  raw.stripe_subscription = String(
+    formData.get("stripe_subscription") === "on" ||
+      formData.get("stripe_subscription") === "true",
   );
   return sponsorSchema.safeParse(raw);
 }
@@ -41,6 +45,7 @@ function sponsorRow(orgId: string, v: SponsorParsed) {
     monthly_price: v.monthly_price ?? null,
     billing_frequency: v.billing_frequency,
     payment_method: v.payment_method ?? null,
+    stripe_subscription: v.stripe_subscription,
   };
 }
 
@@ -63,10 +68,12 @@ async function syncSubscription(
     .maybeSingle();
 
   if (v.package_id) {
+    // "custom" means an à la carte subscription with no standard package.
+    const packageId = v.package_id === "custom" ? null : v.package_id;
     const payload = {
       organization_id: orgId,
       sponsor_id: sponsorId,
-      package_id: v.package_id,
+      package_id: packageId,
       custom_monthly_price: v.custom_monthly_price ?? null,
       auto_generate_deliverables: v.auto_generate_deliverables,
       start_date: v.contract_start_date ?? todayISO(),

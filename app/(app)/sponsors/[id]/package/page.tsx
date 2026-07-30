@@ -24,16 +24,14 @@ export default async function CustomizePackagePage({
 
   const { sponsor, subscription, pkg, packageRules, overrides } = detail;
 
-  if (!subscription || !pkg) {
+  if (!subscription) {
     return (
       <div className="mx-auto max-w-3xl space-y-6">
-        <PageHeader
-          title={`Customize package · ${sponsor.company_name}`}
-        />
+        <PageHeader title={`Manage deliverables · ${sponsor.company_name}`} />
         <EmptyState
           icon={Boxes}
-          title="No package assigned"
-          description="Assign a package to this sponsor first, then you can customize their deliverables."
+          title="No deliverables set up yet"
+          description="On the sponsor, choose a package or “Custom (à la carte)” first — then you can build their exact deliverable list here."
           action={
             <Button asChild>
               <Link href={`/sponsors/${id}/edit`}>Edit sponsor</Link>
@@ -62,13 +60,13 @@ export default async function CustomizePackagePage({
   return (
     <div className="mx-auto max-w-3xl space-y-6">
       <PageHeader
-        title={`Customize package · ${sponsor.company_name}`}
-        description="Tailor this sponsor's deliverables without changing the standard package."
+        title={`Manage deliverables · ${sponsor.company_name}`}
+        description="Build this sponsor's exact deliverable list — à la carte, or as tweaks to their package."
       />
       <CustomizePackageForm
         action={action}
         sponsorId={id}
-        packageName={pkg.name}
+        packageName={pkg?.name ?? "À la carte (no standard package)"}
         packageRules={packageRules.map((r) => ({
           deliverable_type: r.deliverable_type,
           quantity: r.quantity,

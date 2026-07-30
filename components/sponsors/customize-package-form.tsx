@@ -51,13 +51,16 @@ export function CustomizePackageForm({
       <Card>
         <CardHeader>
           <CardTitle className="text-base">
-            Standard “{packageName}” package
+            {packageRules.length === 0
+              ? "À la carte"
+              : `Standard “${packageName}” package`}
           </CardTitle>
         </CardHeader>
         <CardContent>
           {packageRules.length === 0 ? (
             <p className="text-sm text-muted-foreground">
-              This package has no deliverables defined.
+              No standard package — build this sponsor’s deliverables from scratch
+              below.
             </p>
           ) : (
             <ul className="space-y-0.5 text-sm text-muted-foreground">

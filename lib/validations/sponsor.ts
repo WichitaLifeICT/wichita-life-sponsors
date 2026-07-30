@@ -16,7 +16,14 @@ const BILLING_FREQUENCY = [
   "custom",
 ] as const;
 
-const PAYMENT_METHOD = ["ach", "credit_card", "check", "cash", "other"] as const;
+const PAYMENT_METHOD = [
+  "ach",
+  "credit_card",
+  "check",
+  "cash",
+  "stripe",
+  "other",
+] as const;
 
 // Empty string -> undefined, so optional fields clear cleanly.
 const optionalText = z
@@ -77,6 +84,7 @@ export const sponsorSchema = z
       .enum(PAYMENT_METHOD)
       .optional()
       .or(z.literal("").transform(() => undefined)),
+    stripe_subscription: z.coerce.boolean().default(false),
     // Package assignment (creates/updates a single active subscription).
     package_id: z
       .string()
