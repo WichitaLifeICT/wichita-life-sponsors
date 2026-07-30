@@ -132,38 +132,17 @@ export default async function SponsorDetailPage({
               lockedSponsor={{ id, name: sponsor.company_name }}
               returnTo={`/sponsors/${id}`}
               trigger={
-                <Button variant="outline" size="sm">
+                <Button size="sm">
                   <PackagePlus className="size-4" />
                   Log deliverable
                 </Button>
               }
             />
-            <Button
-              variant="outline"
-              size="sm"
-              disabled
-              title="Available when the Billing section ships"
-            >
-              <FilePlus2 className="size-4" />
-              Add invoice
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              disabled
-              title="Available when the Billing section ships"
-            >
-              <CircleDollarSign className="size-4" />
-              Record payment
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              disabled
-              title="Available when the Assets section ships"
-            >
-              <Upload className="size-4" />
-              Upload asset
+            <Button asChild variant="outline" size="sm">
+              <Link href={`/billing/${id}`}>
+                <CircleDollarSign className="size-4" />
+                Payments
+              </Link>
             </Button>
             <ArchiveSponsorDialog
               sponsorId={id}
@@ -387,10 +366,22 @@ export default async function SponsorDetailPage({
         {/* Deliverables */}
         <TabsContent value="deliverables">
           <Card>
-            <CardHeader>
+            <CardHeader className="flex-row items-center justify-between space-y-0">
               <CardTitle className="text-base">
                 Upcoming &amp; scheduled deliverables
               </CardTitle>
+              <AddDeliverableDialog
+                sponsors={[]}
+                defaultMonth={monthParam}
+                lockedSponsor={{ id, name: sponsor.company_name }}
+                returnTo={`/sponsors/${id}`}
+                trigger={
+                  <Button size="sm" variant="outline">
+                    <PackagePlus className="size-4" />
+                    Log deliverable
+                  </Button>
+                }
+              />
             </CardHeader>
             <CardContent>
               {upcoming.length === 0 ? (
