@@ -18,6 +18,8 @@ import { getSessionContext } from "@/lib/data/session";
 import { PaymentStandingBadge } from "@/components/billing/payment-status-badge";
 import { AssetUploader } from "@/components/assets/asset-uploader";
 import { AssetGrid } from "@/components/assets/asset-grid";
+import { AddDeliverableDialog } from "@/components/deliverables/add-deliverable-dialog";
+import { DeliverableStatusBadge } from "@/components/deliverables/status-badge";
 import { PageHeader } from "@/components/layout/page-header";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -39,7 +41,13 @@ import {
 } from "@/components/ui/table";
 import { SponsorStatusBadge } from "@/components/sponsors/badges";
 import { ArchiveSponsorDialog } from "@/components/sponsors/archive-sponsor-dialog";
-import { formatCurrency, formatDate, formatMonth, humanize } from "@/lib/format";
+import {
+  formatCurrency,
+  formatDate,
+  formatMonth,
+  formatMonthShort,
+  humanize,
+} from "@/lib/format";
 import { deliverableTypeLabel } from "@/lib/labels";
 
 export async function generateMetadata({
@@ -85,10 +93,12 @@ export default async function SponsorDetailPage({
     owedThisMonth,
     completedThisMonth,
     upcoming,
+    behind,
     invoices,
     payments,
     isCustomized,
   } = detail;
+  const monthParam = serviceMonth.slice(0, 7);
 
   const unpaidPeriods = billing?.rows.filter((r) => !r.paid) ?? [];
   const hasPeriods = (billing?.rows.length ?? 0) > 0;
@@ -116,15 +126,18 @@ export default async function SponsorDetailPage({
                 </Link>
               </Button>
             )}
-            <Button
-              variant="outline"
-              size="sm"
-              disabled
-              title="Available when the Deliverables generator ships"
-            >
-              <PackagePlus className="size-4" />
-              Add deliverable
-            </Button>
+            <AddDeliverableDialog
+              sponsors={[]}
+              defaultMonth={monthParam}
+              lockedSponsor={{ id, name: sponsor.company_name }}
+              returnTo={`/sponsors/${id}`}
+              trigger={
+                <Button variant="outline" size="sm">
+                  <PackagePlus className="size-4" />
+                  Log deliverable
+                </Button>
+              }
+            />
             <Button
               variant="outline"
               size="sm"
@@ -173,6 +186,58 @@ export default async function SponsorDetailPage({
           </Badge>
         )}
       </div>
+
+      {behind.length > 0 && (
+        <Card className="border-warning/60 bg-warning/5">
+          <CardHeader className="flex-row items-center justify-between space-y-0 pb-3">
+            <CardTitle className="text-base text-warning">
+              Behind — {behind.length} deliverable{behind.length === 1 ? "" : "s"}{" "}
+              past due
+            </CardTitle>
+            <AddDeliverableDialog
+              sponsors={[]}
+              defaultMonth={monthParam}
+              lockedSponsor={{ id, name: sponsor.company_name }}
+              returnTo={`/sponsors/${id}`}
+              trigger={
+                <Button size="sm" variant="outline">
+                  <PackagePlus className="size-4" />
+                  Log one
+                </Button>
+              }
+            />
+          </CardHeader>
+          <CardContent>
+            <ul className="divide-y text-sm">
+              {behind.map((d) => (
+                <li
+                  key={d.id}
+                  className="flex flex-wrap items-center justify-between gap-2 py-2"
+                >
+                  <Link
+                    href={`/deliverables/${d.id}`}
+                    className="font-medium hover:underline"
+                  >
+                    {deliverableTypeLabel(d.deliverable_type)}
+                    <span className="font-normal text-muted-foreground">
+                      {" "}
+                      · owed {formatMonthShort(d.original_service_month)}
+                    </span>
+                  </Link>
+                  <div className="flex items-center gap-2">
+                    {d.due_date && (
+                      <span className="text-xs text-warning">
+                        due {formatDate(d.due_date)}
+                      </span>
+                    )}
+                    <DeliverableStatusBadge status={d.status} />
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </CardContent>
+        </Card>
+      )}
 
       <Tabs defaultValue="overview">
         <TabsList>

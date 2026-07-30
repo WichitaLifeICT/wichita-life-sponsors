@@ -305,6 +305,7 @@ export interface SponsorDetail {
   owedThisMonth: number;
   completedThisMonth: number;
   upcoming: Deliverable[];
+  behind: Deliverable[];
   invoices: InvoiceWithComputed[];
   payments: Payment[];
   paymentStatus: SponsorPaymentStatus;
@@ -336,6 +337,7 @@ export async function getSponsorDetail(
     { data: invoices },
     { data: payments },
     { data: assets },
+    { data: outstanding },
   ] = await Promise.all([
     supabase
       .from("sponsor_subscriptions")
@@ -369,7 +371,19 @@ export async function getSponsorDetail(
       .select("*")
       .eq("sponsor_id", id)
       .order("created_at", { ascending: false }),
+    supabase
+      .from("deliverables")
+      .select("*")
+      .eq("sponsor_id", id)
+      .not("status", "in", "(published,skipped,canceled)")
+      .order("due_date", { ascending: true, nullsFirst: false }),
   ]);
+
+  // "Behind": owed deliverables that are past their due date or from a past month.
+  const behind = ((outstanding ?? []) as Deliverable[]).filter(
+    (d) =>
+      (d.due_date && d.due_date < today) || d.service_month < serviceMonth,
+  );
 
   const subscription =
     ((subs ?? []).find((s) => s.status === "active") as SponsorSubscription) ??
@@ -445,6 +459,7 @@ export async function getSponsorDetail(
     owedThisMonth,
     completedThisMonth,
     upcoming: (upcoming ?? []) as Deliverable[],
+    behind,
     invoices: invoicesWithComputed,
     payments: (payments ?? []) as Payment[],
     paymentStatus: sponsorPaymentStatus(

@@ -31,25 +31,33 @@ import {
 export function AddDeliverableDialog({
   sponsors,
   defaultMonth, // YYYY-MM
+  lockedSponsor,
+  returnTo,
+  trigger,
 }: {
   sponsors: { id: string; name: string }[];
   defaultMonth: string;
+  lockedSponsor?: { id: string; name: string };
+  returnTo?: string;
+  trigger?: React.ReactNode;
 }) {
   const [open, setOpen] = useState(false);
   const [state, formAction, pending] = useActionState<ManualDeliverableState, FormData>(
     addManualDeliverable,
     { error: null },
   );
-  const [sponsorId, setSponsorId] = useState("");
+  const [sponsorId, setSponsorId] = useState(lockedSponsor?.id ?? "");
   const [type, setType] = useState("newsletter_headline");
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline">
-          <Plus className="size-4" />
-          Add deliverable
-        </Button>
+        {trigger ?? (
+          <Button variant="outline">
+            <Plus className="size-4" />
+            Add deliverable
+          </Button>
+        )}
       </DialogTrigger>
       <DialogContent>
         <form action={formAction} className="space-y-4">
@@ -66,22 +74,28 @@ export function AddDeliverableDialog({
             </p>
           )}
 
-          <div className="space-y-2">
-            <Label>Sponsor</Label>
-            <Select value={sponsorId} onValueChange={setSponsorId}>
-              <SelectTrigger>
-                <SelectValue placeholder="Choose a sponsor" />
-              </SelectTrigger>
-              <SelectContent>
-                {sponsors.map((s) => (
-                  <SelectItem key={s.id} value={s.id}>
-                    {s.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <input type="hidden" name="sponsor_id" value={sponsorId} />
-          </div>
+          {returnTo && <input type="hidden" name="return_to" value={returnTo} />}
+
+          {lockedSponsor ? (
+            <input type="hidden" name="sponsor_id" value={lockedSponsor.id} />
+          ) : (
+            <div className="space-y-2">
+              <Label>Sponsor</Label>
+              <Select value={sponsorId} onValueChange={setSponsorId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Choose a sponsor" />
+                </SelectTrigger>
+                <SelectContent>
+                  {sponsors.map((s) => (
+                    <SelectItem key={s.id} value={s.id}>
+                      {s.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <input type="hidden" name="sponsor_id" value={sponsorId} />
+            </div>
+          )}
 
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">

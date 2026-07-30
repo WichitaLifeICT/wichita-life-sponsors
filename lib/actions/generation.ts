@@ -99,7 +99,12 @@ export async function addManualDeliverable(
 
   if (error) return { error: "Could not add the deliverable. Please try again." };
 
+  const returnTo = String(formData.get("return_to") ?? "");
   revalidatePath("/deliverables");
+  if (returnTo) {
+    revalidatePath(returnTo);
+    redirect(returnTo);
+  }
   redirect(`/deliverables?month=${parsed.data.service_month}`);
 }
 
