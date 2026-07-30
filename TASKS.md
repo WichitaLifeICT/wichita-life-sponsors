@@ -62,9 +62,11 @@ without your go-ahead.
 - [x] Automated tests (21 total; 8 dedicated generation cases) + docs/GENERATION.md
 
 ## Stage 7 — Deliverables workspace
-- [ ] Table view + board view (drag/drop if reliable)
-- [ ] Filters + bulk actions
-- [ ] Deliverable detail + status history / audit log
+- [x] Table view (selectable) + board view (drag-drop + move menu)
+- [x] Filters (sponsor/type/status/asset/unscheduled/overdue/carried) + view toggle
+- [x] Bulk actions (publish, assets received, carry forward, set status, set due date)
+- [x] Deliverable detail page + editable fields + status history / audit log
+- [x] Verified: tests, typecheck, lint, production build pass
 
 ## Stage 8 — Content calendar & inventory
 - [ ] Month / week / agenda views

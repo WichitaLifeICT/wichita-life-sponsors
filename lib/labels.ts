@@ -1,4 +1,19 @@
 import { humanize } from "@/lib/format";
+import type { DeliverableStatus } from "@/types/database";
+
+/** All deliverable statuses in workflow order. Client-safe (no server imports). */
+export const DELIVERABLE_STATUSES: DeliverableStatus[] = [
+  "not_scheduled",
+  "waiting_on_assets",
+  "scheduled",
+  "drafting",
+  "ready_for_review",
+  "approved",
+  "published",
+  "skipped",
+  "carried_forward",
+  "canceled",
+];
 
 /**
  * Canonical deliverable-type options (value + human label), used by both the
