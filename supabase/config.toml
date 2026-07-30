@@ -1,0 +1,15 @@
+# Minimal Supabase CLI config (optional — only needed if you use the CLI).
+# Most people can skip the CLI entirely and run the SQL files in the Supabase
+# dashboard SQL editor instead (see README "Database setup").
+#
+# To use the CLI:
+#   1. npm i -g supabase           # or: brew install supabase/tap/supabase
+#   2. supabase link --project-ref <your-project-ref>
+#   3. supabase db push            # applies supabase/migrations/*
+#   4. Run supabase/seed.sql in the SQL editor (demo data)
+#
+# Replace project_id with your project ref (Project Settings -> General).
+project_id = "wichita-life-sponsors"
+
+[db]
+major_version = 15

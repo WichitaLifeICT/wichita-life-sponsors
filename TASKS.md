@@ -12,17 +12,18 @@ without your go-ahead.
 - [x] Write `DATABASE.md`
 - [x] Write `TASKS.md`
 - [x] Explain required accounts, credentials, and environment variables
-- [!] **Get your approval on plan + schema before writing any code**
+- [x] **Approval received** — standalone repo, Supabase setup steps, schema extras approved
 
 ## Stage 2 — Database design & migrations
-- [ ] Scaffold Next.js + TypeScript + Tailwind + shadcn/ui
-- [ ] Add Supabase clients (browser/server) and `.env.local.example`
-- [ ] Write enum types
-- [ ] Write table migrations with FKs + indexes
-- [ ] Enable RLS + policies (`auth_org_id()` helper)
-- [ ] `updated_at` triggers + new-user profile trigger
-- [ ] Seed: Wichita Life org, owner, 3+ packages, 5 sponsors, mixed records
-- [ ] Document how to run migrations and seeds (README)
+- [x] Scaffold Next.js 16 + TypeScript + Tailwind v4 (shadcn foundation set; primitives in Stage 3)
+- [x] Add Supabase clients (browser/server/proxy) and `.env.local.example`
+- [x] Write enum types (13 enums)
+- [x] Write table migrations with FKs + indexes (15 tables)
+- [x] Enable RLS + policies (`auth_org_id()` helper) on every table
+- [x] `updated_at` triggers + new-user profile/org bootstrap trigger
+- [x] Seed: Wichita Life org, 3 packages, 5 sponsors, mixed paid/unpaid/scheduled records
+- [x] Document how to run migrations and seeds (README)
+- [x] Verified: `typecheck`, `lint`, `test`, production `build` all pass
 
 ## Stage 3 — Auth + app shell
 - [ ] Login page (email/password)
