@@ -1,7 +1,11 @@
 import type { Metadata } from "next";
+import Link from "next/link";
+import { Upload } from "lucide-react";
 
 import { getSessionContext } from "@/lib/data/session";
 import { PageHeader } from "@/components/layout/page-header";
+import { Button } from "@/components/ui/button";
+import { RemoveDemoButton } from "@/components/settings/remove-demo-button";
 import {
   Card,
   CardContent,
@@ -12,7 +16,14 @@ import {
 
 export const metadata: Metadata = { title: "Settings — Wichita Life" };
 
-export default async function SettingsPage() {
+const str = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v);
+
+export default async function SettingsPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const sp = await searchParams;
   const session = await getSessionContext();
 
   return (
@@ -21,6 +32,12 @@ export default async function SettingsPage() {
         title="Settings"
         description="Organization, channels, and account preferences."
       />
+
+      {str(sp.removed) === "1" && (
+        <p className="rounded-md bg-success/10 px-3 py-2 text-sm text-success">
+          Demo data removed. Your real records are untouched.
+        </p>
+      )}
 
       <Card>
         <CardHeader>
@@ -53,9 +70,26 @@ export default async function SettingsPage() {
         </CardContent>
       </Card>
 
+      <Card>
+        <CardHeader>
+          <CardTitle>Data management</CardTitle>
+          <CardDescription>
+            Import your real sponsors and clear out the sample data.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="flex flex-wrap gap-2">
+          <Button asChild variant="outline">
+            <Link href="/sponsors/import">
+              <Upload className="size-4" />
+              Import sponsors (CSV)
+            </Link>
+          </Button>
+          <RemoveDemoButton />
+        </CardContent>
+      </Card>
+
       <p className="text-sm text-muted-foreground">
-        Organization settings, channel configuration, and data export arrive in a
-        later stage.
+        Organization settings and channel configuration arrive in a later stage.
       </p>
     </div>
   );

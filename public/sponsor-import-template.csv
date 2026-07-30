@@ -1,0 +1,2 @@
+company_name,status,website,industry,primary_contact_name,primary_contact_email,primary_contact_phone,billing_contact_name,billing_contact_email,monthly_price,billing_frequency,payment_method,contract_start_date,contract_end_date,package,notes
+Example Coffee Co.,active,https://example.com,Food & Beverage,Jane Doe,jane@example.com,316-555-0100,Jane Doe,billing@example.com,500,monthly,stripe,2026-08-01,2027-07-31,Featured Partner,Renewed for a year

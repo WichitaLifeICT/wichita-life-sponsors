@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Building2, Plus } from "lucide-react";
+import { Building2, Plus, Upload } from "lucide-react";
 
 import { getSponsorListData, type SponsorFilters } from "@/lib/data/sponsors";
 import type { SponsorStatus } from "@/types/database";
@@ -59,12 +59,20 @@ export default async function SponsorsPage({
         title="Sponsors"
         description="Every sponsor, their package, payment status, and deliverables."
         actions={
-          <Button asChild>
-            <Link href="/sponsors/new">
-              <Plus className="size-4" />
-              New sponsor
-            </Link>
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button asChild variant="outline">
+              <Link href="/sponsors/import">
+                <Upload className="size-4" />
+                Import
+              </Link>
+            </Button>
+            <Button asChild>
+              <Link href="/sponsors/new">
+                <Plus className="size-4" />
+                New sponsor
+              </Link>
+            </Button>
+          </div>
         }
       />
 
