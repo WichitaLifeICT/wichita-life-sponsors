@@ -6,7 +6,6 @@ import { archiveSponsor } from "@/lib/actions/sponsors";
 import { Button } from "@/components/ui/button";
 import {
   AlertDialog,
-  AlertDialogAction,
   AlertDialogCancel,
   AlertDialogContent,
   AlertDialogDescription,
@@ -44,7 +43,7 @@ export function ArchiveSponsorDialog({
         <AlertDialogFooter>
           <AlertDialogCancel>Cancel</AlertDialogCancel>
           <form action={action}>
-            <AlertDialogAction type="submit">Archive sponsor</AlertDialogAction>
+            <Button type="submit">Archive sponsor</Button>
           </form>
         </AlertDialogFooter>
       </AlertDialogContent>

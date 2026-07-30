@@ -6,7 +6,6 @@ import { removeDemoData } from "@/lib/actions/data";
 import { Button } from "@/components/ui/button";
 import {
   AlertDialog,
-  AlertDialogAction,
   AlertDialogCancel,
   AlertDialogContent,
   AlertDialogDescription,
@@ -36,8 +35,10 @@ export function RemoveDemoButton() {
         </AlertDialogHeader>
         <AlertDialogFooter>
           <AlertDialogCancel>Cancel</AlertDialogCancel>
+          {/* Plain submit (not AlertDialogAction) so closing the dialog doesn't
+              abort the server action before it runs. */}
           <form action={removeDemoData}>
-            <AlertDialogAction type="submit">Remove demo data</AlertDialogAction>
+            <Button type="submit">Remove demo data</Button>
           </form>
         </AlertDialogFooter>
       </AlertDialogContent>

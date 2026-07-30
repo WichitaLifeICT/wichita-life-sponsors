@@ -30,7 +30,6 @@ import {
 } from "@/components/ui/table";
 import {
   AlertDialog,
-  AlertDialogAction,
   AlertDialogCancel,
   AlertDialogContent,
   AlertDialogDescription,
@@ -114,7 +113,9 @@ export default async function DropoffDetailPage({
                   <AlertDialogFooter>
                     <AlertDialogCancel>Cancel</AlertDialogCancel>
                     <form action={deleteDropoff.bind(null, id)}>
-                      <AlertDialogAction type="submit">Delete</AlertDialogAction>
+                      <Button type="submit" variant="destructive">
+                        Delete
+                      </Button>
                     </form>
                   </AlertDialogFooter>
                 </AlertDialogContent>

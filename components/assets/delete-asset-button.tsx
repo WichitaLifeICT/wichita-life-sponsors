@@ -6,7 +6,6 @@ import { deleteAsset } from "@/lib/actions/assets";
 import { Button } from "@/components/ui/button";
 import {
   AlertDialog,
-  AlertDialogAction,
   AlertDialogCancel,
   AlertDialogContent,
   AlertDialogDescription,
@@ -50,7 +49,9 @@ export function DeleteAssetButton({
         <AlertDialogFooter>
           <AlertDialogCancel>Cancel</AlertDialogCancel>
           <form action={deleteAsset.bind(null, id, path, sponsorId)}>
-            <AlertDialogAction type="submit">Delete</AlertDialogAction>
+            <Button type="submit" variant="destructive">
+              Delete
+            </Button>
           </form>
         </AlertDialogFooter>
       </AlertDialogContent>

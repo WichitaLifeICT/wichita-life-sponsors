@@ -390,9 +390,9 @@ export function CalendarBoard({
                         <AlertDialogFooter>
                           <AlertDialogCancel>Cancel</AlertDialogCancel>
                           <form action={deleteSlot.bind(null, manageSlot.id, month)}>
-                            <AlertDialogAction type="submit">
+                            <Button type="submit" variant="destructive">
                               Delete slot
-                            </AlertDialogAction>
+                            </Button>
                           </form>
                         </AlertDialogFooter>
                       </AlertDialogContent>

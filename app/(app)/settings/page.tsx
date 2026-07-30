@@ -33,9 +33,11 @@ export default async function SettingsPage({
         description="Organization, channels, and account preferences."
       />
 
-      {str(sp.removed) === "1" && (
+      {str(sp.removed) !== undefined && (
         <p className="rounded-md bg-success/10 px-3 py-2 text-sm text-success">
-          Demo data removed. Your real records are untouched.
+          Removed {str(sp.removed)} demo record
+          {str(sp.removed) === "1" ? "" : "s"} (plus their related rows). Your real
+          data is untouched.
         </p>
       )}
 
