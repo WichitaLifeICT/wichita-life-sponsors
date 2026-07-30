@@ -44,6 +44,14 @@ import { cn } from "@/lib/utils";
 const SLOT_LABEL = new Map<string, string>(SLOT_TYPE_OPTIONS);
 const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
+// Email ad-tier slot titles → the deliverable type they're meant to hold.
+const TIER_TYPE: Record<string, string> = {
+  Headline: "newsletter_headline",
+  Feature: "newsletter_feature",
+  Lower: "newsletter_lower",
+  "Event banner": "event_banner",
+};
+
 const FILL_CLASSES: Record<SlotFill, string> = {
   empty: "border-l-muted-foreground/40 bg-muted/50 text-muted-foreground",
   partial: "border-l-warning bg-warning/10",
@@ -83,6 +91,14 @@ export function CalendarBoard({
   } | null>(null);
 
   const manageSlot = slots.find((s) => s.id === manageId) ?? null;
+  const matchType = manageSlot ? TIER_TYPE[manageSlot.title ?? ""] : undefined;
+  const assignOptions = matchType
+    ? [...unscheduled].sort(
+        (a, b) =>
+          (b.deliverable_type === matchType ? 1 : 0) -
+          (a.deliverable_type === matchType ? 1 : 0),
+      )
+    : unscheduled;
 
   const slotsByDate = new Map<string, SlotWithAssignments[]>();
   for (const s of slots) {
@@ -329,8 +345,9 @@ export function CalendarBoard({
                           className="flex h-9 w-full rounded-md border border-input bg-transparent px-2 text-sm"
                         >
                           <option value="">Choose…</option>
-                          {unscheduled.map((d) => (
+                          {assignOptions.map((d) => (
                             <option key={d.id} value={d.id}>
+                              {matchType && d.deliverable_type === matchType ? "★ " : ""}
                               {d.sponsorName} · {deliverableTypeLabel(d.deliverable_type)}
                             </option>
                           ))}

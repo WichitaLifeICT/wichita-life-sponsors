@@ -6,7 +6,6 @@ import { useFormStatus } from "react-dom";
 
 import { generateEmailSlots } from "@/lib/actions/calendar";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   Dialog,
@@ -27,6 +26,7 @@ const WEEKDAYS = [
   ["6", "Sat"],
 ] as const;
 const DEFAULT_ON = new Set(["1", "3", "4", "5"]);
+const TIERS = ["Headline", "Feature", "Lower", "Event banner"];
 
 function SubmitButton() {
   const { pending } = useFormStatus();
@@ -85,15 +85,29 @@ export function GenerateEmailsDialog({ month }: { month: string }) {
             </div>
           </div>
 
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="space-y-2">
-              <Label htmlFor="es_title">Slot title</Label>
-              <Input id="es_title" name="title" defaultValue="Wichita Life Newsletter" />
+          <div className="space-y-2">
+            <Label>Ad slots per email</Label>
+            <div className="flex flex-wrap gap-2">
+              {TIERS.map((t) => (
+                <label
+                  key={t}
+                  className="flex items-center gap-1.5 rounded-md border px-2.5 py-1.5 text-sm"
+                >
+                  <input
+                    type="checkbox"
+                    name="tier"
+                    value={t}
+                    defaultChecked
+                    className="size-4 rounded border-input"
+                  />
+                  {t}
+                </label>
+              ))}
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="es_cap">Ad spots per email</Label>
-              <Input id="es_cap" name="capacity" type="number" min={1} max={20} defaultValue={4} />
-            </div>
+            <p className="text-xs text-muted-foreground">
+              Each becomes its own clickable slot on the calendar (one sponsor per
+              slot).
+            </p>
           </div>
 
           <div className="flex justify-end gap-2">

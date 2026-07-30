@@ -63,35 +63,39 @@ export async function updateSlot(
   redirect(`/calendar?month=${parsed.data.scheduled_date.slice(0, 7)}`);
 }
 
+const DEFAULT_TIERS = ["Headline", "Feature", "Lower", "Event banner"];
+
 /**
- * Auto-create a newsletter (email) slot on each selected weekday of a month —
- * defaults to Mon/Wed/Thu/Fri (Wichita Life's send schedule). Idempotent: skips
- * dates that already have a newsletter slot, so re-running never duplicates and
- * days you deleted for a holiday only come back if you ask it to regenerate.
+ * Auto-create email ad slots for a month. For each selected send day
+ * (defaults to Mon/Wed/Thu/Fri) it creates one newsletter slot per selected ad
+ * tier (Headline / Feature / Lower / Event banner), each holding one sponsor, so
+ * every tier shows as its own clickable slot on the calendar. Idempotent: skips
+ * a (date, tier) that already exists, so deleted days only return if regenerated.
  */
 export async function generateEmailSlots(month: string, formData: FormData) {
   const session = await getSessionContext();
   if (!session?.organization) redirect("/login");
 
-  const selected = formData.getAll("weekday").map((v) => Number(v));
-  const weekdays = new Set(selected.length ? selected : [1, 3, 4, 5]);
-  const capRaw = Number(formData.get("capacity"));
-  const capacity = Number.isFinite(capRaw) && capRaw >= 1 ? Math.trunc(capRaw) : 4;
-  const title = String(formData.get("title") ?? "").trim() || "Wichita Life Newsletter";
+  const selectedDays = formData.getAll("weekday").map((v) => Number(v));
+  const weekdays = new Set(selectedDays.length ? selectedDays : [1, 3, 4, 5]);
+  const selectedTiers = formData.getAll("tier").map((v) => String(v));
+  const tiers = selectedTiers.length ? selectedTiers : DEFAULT_TIERS;
 
   const [y, m] = month.split("-").map(Number);
   const totalDays = new Date(Date.UTC(y, m, 0)).getUTCDate();
 
   const supabase = await createClient();
 
-  // Existing newsletter slots this month → don't duplicate a date.
+  // Existing newsletter slots this month, keyed by date + tier title.
   const { data: existing } = await supabase
     .from("content_slots")
-    .select("scheduled_date")
+    .select("scheduled_date, title")
     .eq("slot_type", "newsletter")
     .gte("scheduled_date", `${month}-01`)
     .lte("scheduled_date", `${month}-${String(totalDays).padStart(2, "0")}`);
-  const taken = new Set((existing ?? []).map((s) => s.scheduled_date as string));
+  const taken = new Set(
+    (existing ?? []).map((s) => `${s.scheduled_date}|${s.title ?? ""}`),
+  );
 
   const toInsert: {
     organization_id: string;
@@ -104,14 +108,16 @@ export async function generateEmailSlots(month: string, formData: FormData) {
     const weekday = new Date(Date.UTC(y, m - 1, day)).getUTCDay();
     if (!weekdays.has(weekday)) continue;
     const date = `${month}-${String(day).padStart(2, "0")}`;
-    if (taken.has(date)) continue;
-    toInsert.push({
-      organization_id: session.organization.id,
-      slot_type: "newsletter",
-      title,
-      scheduled_date: date,
-      capacity,
-    });
+    for (const tier of tiers) {
+      if (taken.has(`${date}|${tier}`)) continue;
+      toInsert.push({
+        organization_id: session.organization.id,
+        slot_type: "newsletter",
+        title: tier,
+        scheduled_date: date,
+        capacity: 1,
+      });
+    }
   }
 
   if (toInsert.length > 0) {
