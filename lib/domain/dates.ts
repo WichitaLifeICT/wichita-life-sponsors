@@ -23,6 +23,13 @@ export function toServiceMonth(date: string): string {
   return `${date.slice(0, 7)}-01`;
 }
 
+/** Whole months from serviceMonth `a` to `b` (b - a). Both "YYYY-MM-01". */
+export function monthsBetween(a: string, b: string): number {
+  const [ay, am] = a.split("-").map(Number);
+  const [by, bm] = b.split("-").map(Number);
+  return (by * 12 + (bm - 1)) - (ay * 12 + (am - 1));
+}
+
 /** Add N months to a "YYYY-MM-01" service month (N may be negative). */
 export function addMonths(serviceMonth: string, n: number): string {
   const [y, m] = serviceMonth.split("-").map(Number);

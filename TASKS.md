@@ -54,12 +54,12 @@ without your go-ahead.
 - [x] Verified: tests, typecheck, lint, production build pass
 
 ## Stage 6 — Monthly deliverable generation
-- [ ] Generation button + month selector + preview
-- [ ] Idempotent generation; respect dates, status, recurrence, overrides
-- [ ] `generation_runs` record
-- [ ] Manual add + carry-forward (preserve original service month)
-- [ ] Monthly fulfillment summary
-- [ ] Automated tests
+- [x] Generation button + month selector + preview dialog
+- [x] Idempotent generation; respects dates, status, recurrence, overrides
+- [x] `generation_runs` record written on each run
+- [x] Manual add + carry-forward (preserves original service month)
+- [x] Monthly fulfillment summary (owed/published/scheduled/waiting/not-scheduled/carried + %)
+- [x] Automated tests (21 total; 8 dedicated generation cases) + docs/GENERATION.md
 
 ## Stage 7 — Deliverables workspace
 - [ ] Table view + board view (drag/drop if reliable)

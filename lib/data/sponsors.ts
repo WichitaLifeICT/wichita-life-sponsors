@@ -258,6 +258,22 @@ export async function getSponsorListData(
   };
 }
 
+/** Lightweight sponsor list for dropdowns (excludes archived). */
+export async function getSponsorsForSelect(): Promise<
+  { id: string; name: string }[]
+> {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("sponsors")
+    .select("id, company_name")
+    .neq("status", "archived")
+    .order("company_name", { ascending: true });
+  return (data ?? []).map((s) => ({
+    id: s.id as string,
+    name: s.company_name as string,
+  }));
+}
+
 // ---------------------------------------------------------------------------
 // Sponsor detail
 // ---------------------------------------------------------------------------
