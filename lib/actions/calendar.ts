@@ -63,6 +63,65 @@ export async function updateSlot(
   redirect(`/calendar?month=${parsed.data.scheduled_date.slice(0, 7)}`);
 }
 
+/**
+ * Auto-create a newsletter (email) slot on each selected weekday of a month —
+ * defaults to Mon/Wed/Thu/Fri (Wichita Life's send schedule). Idempotent: skips
+ * dates that already have a newsletter slot, so re-running never duplicates and
+ * days you deleted for a holiday only come back if you ask it to regenerate.
+ */
+export async function generateEmailSlots(month: string, formData: FormData) {
+  const session = await getSessionContext();
+  if (!session?.organization) redirect("/login");
+
+  const selected = formData.getAll("weekday").map((v) => Number(v));
+  const weekdays = new Set(selected.length ? selected : [1, 3, 4, 5]);
+  const capRaw = Number(formData.get("capacity"));
+  const capacity = Number.isFinite(capRaw) && capRaw >= 1 ? Math.trunc(capRaw) : 4;
+  const title = String(formData.get("title") ?? "").trim() || "Wichita Life Newsletter";
+
+  const [y, m] = month.split("-").map(Number);
+  const totalDays = new Date(Date.UTC(y, m, 0)).getUTCDate();
+
+  const supabase = await createClient();
+
+  // Existing newsletter slots this month → don't duplicate a date.
+  const { data: existing } = await supabase
+    .from("content_slots")
+    .select("scheduled_date")
+    .eq("slot_type", "newsletter")
+    .gte("scheduled_date", `${month}-01`)
+    .lte("scheduled_date", `${month}-${String(totalDays).padStart(2, "0")}`);
+  const taken = new Set((existing ?? []).map((s) => s.scheduled_date as string));
+
+  const toInsert: {
+    organization_id: string;
+    slot_type: "newsletter";
+    title: string;
+    scheduled_date: string;
+    capacity: number;
+  }[] = [];
+  for (let day = 1; day <= totalDays; day++) {
+    const weekday = new Date(Date.UTC(y, m - 1, day)).getUTCDay();
+    if (!weekdays.has(weekday)) continue;
+    const date = `${month}-${String(day).padStart(2, "0")}`;
+    if (taken.has(date)) continue;
+    toInsert.push({
+      organization_id: session.organization.id,
+      slot_type: "newsletter",
+      title,
+      scheduled_date: date,
+      capacity,
+    });
+  }
+
+  if (toInsert.length > 0) {
+    await supabase.from("content_slots").insert(toInsert);
+  }
+
+  revalidatePath("/calendar");
+  redirect(`/calendar?month=${month}`);
+}
+
 /** Delete a slot and unschedule any deliverables that were assigned to it. */
 export async function deleteSlot(id: string, month: string) {
   const supabase = await createClient();

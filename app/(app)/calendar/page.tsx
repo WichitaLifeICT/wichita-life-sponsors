@@ -10,6 +10,7 @@ import { currentServiceMonth } from "@/lib/domain/dates";
 import { PageHeader } from "@/components/layout/page-header";
 import { MonthPicker } from "@/components/deliverables/month-picker";
 import { AddDeliverableDialog } from "@/components/deliverables/add-deliverable-dialog";
+import { GenerateEmailsDialog } from "@/components/calendar/generate-emails-dialog";
 import { CalendarFilters } from "@/components/calendar/calendar-filters";
 import { CalendarBoard } from "@/components/calendar/calendar-board";
 
@@ -50,6 +51,7 @@ export default async function CalendarPage({
         actions={
           <div className="flex flex-wrap items-center gap-2">
             <MonthPicker month={month} />
+            <GenerateEmailsDialog month={month} />
             <AddDeliverableDialog sponsors={sponsors} defaultMonth={month} />
           </div>
         }
