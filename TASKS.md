@@ -126,11 +126,13 @@ without your go-ahead.
 - [ ] `TESTING.md`
 
 ## Stage 16 — Prepare for real use
-- [ ] Separate demo vs production data; safe demo-removal process
-- [ ] CSV import for sponsors (+ invoices if practical) + template + dup detection
-- [ ] Pre-launch + security checklist (RLS, secrets, no service-role in browser)
-- [ ] Vercel deployment instructions
-- [ ] Full README + `USER_GUIDE.md`
+- [x] Demo data flagged (is_demo) + safe one-click removal (Settings) + SQL script
+- [x] CSV import for sponsors + template + duplicate detection + package-by-name
+- [~] CSV import for invoices — N/A (billing simplified to mark-paid, no invoices)
+- [x] Pre-launch + security checklist (docs/PRE_LAUNCH.md; RLS, secrets, no service-role in browser)
+- [x] Vercel deployment instructions (docs/DEPLOY.md)
+- [x] `USER_GUIDE.md` (plain-English admin guide)
+- [ ] (Optional) README polish pass
 
 ## Bonus — Distribution (wholesale & consignment) — owner request
 - [x] Schema: locations, products, drop-offs, line items (migration 20260101000007) + RLS
