@@ -36,11 +36,13 @@ without your go-ahead.
 - [x] Verified: typecheck, lint, build, and runtime route smoke test all pass
 
 ## Stage 4 — Sponsors
-- [ ] Sponsor list with columns, search, filters, sorting, pagination
-- [ ] Summary cards (active, contracted revenue, unpaid, expiring ≤60d)
-- [ ] Create / edit sponsor forms + validation
-- [ ] Sponsor detail page (Overview / Deliverables / Billing / Assets / Notes)
-- [ ] Action buttons + confirmation dialogs
+- [x] Sponsor list with columns, search, filters (status/package/payment/expiring), sorting, pagination
+- [x] Summary cards (active, contracted revenue, unpaid, expiring ≤60d) — clickable to filtered views
+- [x] Create / edit sponsor forms + Zod validation + package assignment
+- [x] Sponsor detail page (Overview / Deliverables / Billing / Assets / Notes tabs)
+- [x] Action buttons + archive confirmation dialog; "customized package" indicator
+- [x] Domain logic (revenue normalization, payment status, dates) with unit tests
+- [x] Verified: typecheck, lint, production build pass
 
 ## Stage 5 — Packages + overrides
 - [ ] Package list / create / edit / deactivate / duplicate
