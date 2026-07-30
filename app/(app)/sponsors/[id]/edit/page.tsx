@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { getSponsorDetail } from "@/lib/data/sponsors";
 import { getPackagesForSelect } from "@/lib/data/packages";
 import { updateSponsor } from "@/lib/actions/sponsors";
+import { resolveEffectiveDeliverables } from "@/lib/domain/deliverable-rules";
 import { PageHeader } from "@/components/layout/page-header";
 import {
   SponsorForm,
@@ -24,9 +25,31 @@ export default async function EditSponsorPage({
   ]);
   if (!detail) notFound();
 
-  const { sponsor, subscription } = detail;
+  const { sponsor, subscription, packageRules, overrides } = detail;
   const num = (n: number | null | undefined) =>
     n === null || n === undefined ? undefined : String(n);
+
+  // For an à la carte sponsor (subscription with no package), prefill the builder
+  // with their current effective deliverables.
+  const alaCarteRules =
+    subscription && !subscription.package_id
+      ? resolveEffectiveDeliverables(
+          packageRules.map((r) => ({
+            deliverable_type: r.deliverable_type,
+            quantity: r.quantity,
+            recurrence: r.recurrence,
+          })),
+          overrides.map((o) => ({
+            deliverable_type: o.deliverable_type,
+            quantity: o.quantity,
+            recurrence: o.recurrence,
+          })),
+        ).map((e) => ({
+          deliverable_type: e.deliverable_type,
+          quantity: e.quantity,
+          recurrence: e.recurrence,
+        }))
+      : undefined;
 
   const defaults: SponsorFormDefaults = {
     company_name: sponsor.company_name,
@@ -51,6 +74,7 @@ export default async function EditSponsorPage({
     custom_monthly_price: num(subscription?.custom_monthly_price),
     auto_generate_deliverables:
       subscription?.auto_generate_deliverables ?? true,
+    rules: alaCarteRules,
   };
 
   const action = updateSponsor.bind(null, id);

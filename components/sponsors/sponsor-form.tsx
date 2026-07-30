@@ -22,6 +22,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { RulesEditor, type RuleRow } from "@/components/packages/rules-editor";
 
 type Action = (
   prev: SponsorActionState,
@@ -48,6 +49,7 @@ export interface SponsorFormDefaults {
   package_id?: string;
   custom_monthly_price?: string;
   auto_generate_deliverables?: boolean;
+  rules?: RuleRow[];
 }
 
 const STATUS = [
@@ -327,10 +329,8 @@ export function SponsorForm({
             </Select>
             <input type="hidden" name="package_id" value={packageId} />
             <p className="text-xs text-muted-foreground">
-              Pick a package, or choose <strong>Custom (à la carte)</strong> to
-              build any mix of deliverables. Then use{" "}
-              <strong>Manage deliverables</strong> on the sponsor to set the exact
-              list (e.g. 2 emails, or 2 emails + 1 social, or an event banner).
+              Pick a saved package, or choose <strong>Custom (à la carte)</strong>{" "}
+              to build the deliverables right here.
             </p>
           </div>
           <div className="space-y-2">
@@ -357,6 +357,38 @@ export function SponsorForm({
             />
             Automatically generate this sponsor&apos;s monthly deliverables
           </label>
+
+          {packageId === "custom" && (
+            <div className="space-y-3 rounded-md border bg-muted/30 p-3 sm:col-span-2">
+              <div>
+                <p className="text-sm font-medium">Build deliverables</p>
+                <p className="text-xs text-muted-foreground">
+                  Add each deliverable this sponsor gets (type · quantity ·
+                  recurrence).
+                </p>
+              </div>
+              <div className="grid grid-cols-1 gap-2 text-xs text-muted-foreground sm:grid-cols-[1fr_90px_1fr_auto]">
+                <span>Type</span>
+                <span>Qty</span>
+                <span>Recurrence</span>
+                <span className="sr-only">Actions</span>
+              </div>
+              <RulesEditor initialRules={defaults.rules} />
+
+              <label className="flex items-center gap-2 border-t pt-3 text-sm">
+                <input
+                  type="checkbox"
+                  name="save_as_package"
+                  className="size-4 rounded border-input"
+                />
+                Also save this as a reusable package
+              </label>
+              <Input
+                name="new_package_name"
+                placeholder="New package name (only if saving above)"
+              />
+            </div>
+          )}
         </CardContent>
       </Card>
 

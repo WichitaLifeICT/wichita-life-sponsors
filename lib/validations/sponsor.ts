@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { deliverableRuleSchema } from "@/lib/validations/package";
 
 const SPONSOR_STATUS = [
   "lead",
@@ -92,6 +93,10 @@ export const sponsorSchema = z
       .transform((v) => (v && v !== "none" ? v : undefined)),
     custom_monthly_price: optionalMoney,
     auto_generate_deliverables: z.coerce.boolean().default(true),
+    // Inline à la carte deliverables (used when package_id === "custom").
+    rules: z.array(deliverableRuleSchema).default([]),
+    save_as_package: z.coerce.boolean().default(false),
+    new_package_name: optionalText,
   })
   .refine(
     (data) =>

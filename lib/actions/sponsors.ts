@@ -14,16 +14,23 @@ export interface SponsorActionState {
 }
 
 function parseForm(formData: FormData) {
-  const raw = Object.fromEntries(formData.entries());
+  const raw: Record<string, unknown> = Object.fromEntries(formData.entries());
   // Checkboxes: present only when checked.
-  raw.auto_generate_deliverables = String(
+  raw.auto_generate_deliverables =
     formData.get("auto_generate_deliverables") === "on" ||
-      formData.get("auto_generate_deliverables") === "true",
-  );
-  raw.stripe_subscription = String(
+    formData.get("auto_generate_deliverables") === "true";
+  raw.stripe_subscription =
     formData.get("stripe_subscription") === "on" ||
-      formData.get("stripe_subscription") === "true",
-  );
+    formData.get("stripe_subscription") === "true";
+  raw.save_as_package =
+    formData.get("save_as_package") === "on" ||
+    formData.get("save_as_package") === "true";
+  // Inline deliverable rows arrive as a JSON string.
+  try {
+    raw.rules = JSON.parse(String(formData.get("rules") ?? "[]"));
+  } catch {
+    raw.rules = [];
+  }
   return sponsorSchema.safeParse(raw);
 }
 
@@ -51,8 +58,10 @@ function sponsorRow(orgId: string, v: SponsorParsed) {
 
 /**
  * Ensure the sponsor's single active subscription reflects the chosen package.
- * Full subscription lifecycle (pause, multiple, deliverable overrides) lands in
- * the Packages stage; here we keep one active subscription in sync.
+ *  - a real package id  -> subscription on that package
+ *  - "custom"           -> build deliverables inline (à la carte). Optionally
+ *                          save those as a new reusable package (save_as_package).
+ *  - undefined ("none") -> end the active subscription
  */
 async function syncSubscription(
   supabase: Awaited<ReturnType<typeof createClient>>,
@@ -67,33 +76,90 @@ async function syncSubscription(
     .eq("status", "active")
     .maybeSingle();
 
-  if (v.package_id) {
-    // "custom" means an à la carte subscription with no standard package.
-    const packageId = v.package_id === "custom" ? null : v.package_id;
-    const payload = {
-      organization_id: orgId,
-      sponsor_id: sponsorId,
-      package_id: packageId,
-      custom_monthly_price: v.custom_monthly_price ?? null,
-      auto_generate_deliverables: v.auto_generate_deliverables,
-      start_date: v.contract_start_date ?? todayISO(),
-      end_date: v.contract_end_date ?? null,
-      status: "active" as const,
-    };
+  if (!v.package_id) {
     if (existing) {
       await supabase
         .from("sponsor_subscriptions")
-        .update(payload)
+        .update({ status: "ended", end_date: todayISO() })
         .eq("id", existing.id);
-    } else {
-      await supabase.from("sponsor_subscriptions").insert(payload);
     }
-  } else if (existing) {
-    // Package cleared: end the active subscription.
-    await supabase
+    return;
+  }
+
+  const isCustom = v.package_id === "custom";
+  const savingPackage = isCustom && v.save_as_package && !!v.new_package_name;
+  let packageId: string | null = isCustom ? null : v.package_id;
+
+  // Optionally turn the inline deliverables into a reusable package.
+  if (savingPackage) {
+    const { data: pkg } = await supabase
+      .from("packages")
+      .insert({
+        organization_id: orgId,
+        name: v.new_package_name!,
+        base_price: v.custom_monthly_price ?? 0,
+        billing_frequency: v.billing_frequency,
+        active: true,
+      })
+      .select("id")
+      .single();
+    packageId = pkg?.id ?? null;
+    if (packageId && v.rules.length > 0) {
+      await supabase.from("package_deliverable_rules").insert(
+        v.rules.map((r) => ({
+          organization_id: orgId,
+          package_id: packageId,
+          deliverable_type: r.deliverable_type,
+          quantity: r.quantity,
+          recurrence: r.recurrence,
+          notes: r.notes ?? null,
+        })),
+      );
+    }
+  }
+
+  const payload = {
+    organization_id: orgId,
+    sponsor_id: sponsorId,
+    package_id: packageId,
+    custom_monthly_price: v.custom_monthly_price ?? null,
+    auto_generate_deliverables: v.auto_generate_deliverables,
+    start_date: v.contract_start_date ?? todayISO(),
+    end_date: v.contract_end_date ?? null,
+    status: "active" as const,
+  };
+
+  let subscriptionId = existing?.id ?? null;
+  if (existing) {
+    await supabase.from("sponsor_subscriptions").update(payload).eq("id", existing.id);
+  } else {
+    const { data: sub } = await supabase
       .from("sponsor_subscriptions")
-      .update({ status: "ended", end_date: todayISO() })
-      .eq("id", existing.id);
+      .insert(payload)
+      .select("id")
+      .single();
+    subscriptionId = sub?.id ?? null;
+  }
+
+  // À la carte (not saved as a package): store the inline rows as overrides so
+  // generation picks them up. Replace any previous overrides.
+  if (isCustom && !savingPackage && subscriptionId) {
+    await supabase
+      .from("subscription_deliverable_overrides")
+      .delete()
+      .eq("sponsor_subscription_id", subscriptionId);
+    if (v.rules.length > 0) {
+      await supabase.from("subscription_deliverable_overrides").insert(
+        v.rules.map((r) => ({
+          organization_id: orgId,
+          sponsor_subscription_id: subscriptionId,
+          deliverable_type: r.deliverable_type,
+          quantity: r.quantity,
+          recurrence: r.recurrence,
+          notes: r.notes ?? null,
+        })),
+      );
+    }
   }
 }
 
