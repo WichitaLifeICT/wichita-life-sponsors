@@ -176,3 +176,95 @@ export async function getUnscheduledDeliverables(
   }));
 }
 
+export interface SponsorScheduling {
+  sponsorId: string;
+  sponsorName: string;
+  owed: number;
+  scheduled: number;
+  remaining: number;
+  byType: { deliverable_type: DeliverableType; owed: number; scheduled: number }[];
+  unscheduled: UnscheduledDeliverable[];
+}
+
+/**
+ * Per-sponsor scheduling status for a month: how many deliverables are owed vs
+ * already scheduled (or published), plus the specific rows still needing a slot.
+ * Sorted so sponsors that still need scheduling come first.
+ */
+export async function getMonthlySchedulingBySponsor(
+  month: string,
+): Promise<SponsorScheduling[]> {
+  const supabase = await createClient();
+  const { data: deliverables } = await supabase
+    .from("deliverables")
+    .select(
+      "id, deliverable_type, sponsor_id, scheduled_date, status, service_month, due_date",
+    )
+    .eq("service_month", `${month}-01`);
+
+  const rows = (deliverables ?? []).filter(
+    (d) => !["skipped", "canceled"].includes(d.status as string),
+  );
+  if (rows.length === 0) return [];
+
+  const { data: sponsors } = await supabase
+    .from("sponsors")
+    .select("id, company_name");
+  const sponsorName = new Map(
+    (sponsors ?? []).map((s) => [s.id as string, s.company_name as string]),
+  );
+
+  const isScheduled = (d: { scheduled_date: unknown; status: unknown }) =>
+    d.scheduled_date != null || d.status === "published";
+
+  const groups = new Map<string, SponsorScheduling>();
+  for (const d of rows) {
+    const sid = d.sponsor_id as string;
+    let g = groups.get(sid);
+    if (!g) {
+      g = {
+        sponsorId: sid,
+        sponsorName: sponsorName.get(sid) ?? "Unknown",
+        owed: 0,
+        scheduled: 0,
+        remaining: 0,
+        byType: [],
+        unscheduled: [],
+      };
+      groups.set(sid, g);
+    }
+    g.owed += 1;
+    const sched = isScheduled(d);
+    if (sched) g.scheduled += 1;
+    else {
+      g.remaining += 1;
+      g.unscheduled.push({
+        id: d.id as string,
+        deliverable_type: d.deliverable_type as DeliverableType,
+        sponsorId: sid,
+        sponsorName: g.sponsorName,
+        service_month: d.service_month as string,
+        due_date: (d.due_date as string | null) ?? null,
+      });
+    }
+    const t = g.byType.find((x) => x.deliverable_type === d.deliverable_type);
+    if (t) {
+      t.owed += 1;
+      if (sched) t.scheduled += 1;
+    } else {
+      g.byType.push({
+        deliverable_type: d.deliverable_type as DeliverableType,
+        owed: 1,
+        scheduled: sched ? 1 : 0,
+      });
+    }
+  }
+
+  return [...groups.values()].sort((a, b) => {
+    const ai = a.remaining > 0 ? 1 : 0;
+    const bi = b.remaining > 0 ? 1 : 0;
+    if (ai !== bi) return bi - ai;
+    return a.sponsorName.localeCompare(b.sponsorName);
+  });
+}
+

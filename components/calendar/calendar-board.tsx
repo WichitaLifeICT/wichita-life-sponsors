@@ -13,8 +13,8 @@ import {
 } from "@/lib/actions/calendar";
 import type {
   SlotWithAssignments,
-  UnscheduledDeliverable,
   SlotFill,
+  SponsorScheduling,
 } from "@/lib/data/calendar";
 import { SLOT_TYPE_OPTIONS } from "@/lib/labels";
 import { SlotForm } from "@/components/calendar/slot-form";
@@ -64,13 +64,14 @@ export function CalendarBoard({
   month,
   view,
   slots,
-  unscheduled,
+  scheduling,
 }: {
   month: string;
   view: "month" | "agenda";
   slots: SlotWithAssignments[];
-  unscheduled: UnscheduledDeliverable[];
+  scheduling: SponsorScheduling[];
 }) {
+  const unscheduled = scheduling.flatMap((g) => g.unscheduled);
   const [newSlotDate, setNewSlotDate] = useState<string | null>(null);
   const [manageId, setManageId] = useState<string | null>(null);
   const [editing, setEditing] = useState(false);
@@ -139,35 +140,64 @@ export function CalendarBoard({
         )}
       </div>
 
-      {/* Unscheduled panel */}
+      {/* Per-sponsor scheduling status */}
       <aside className="space-y-2">
         <div className="rounded-lg border bg-card">
           <div className="border-b px-3 py-2 text-sm font-medium">
-            Unscheduled this month ({unscheduled.length})
+            This month by sponsor
           </div>
-          <div className="max-h-[28rem] space-y-1 overflow-y-auto p-2">
-            {unscheduled.length === 0 ? (
+          <div className="max-h-[32rem] space-y-2 overflow-y-auto p-2">
+            {scheduling.length === 0 ? (
               <p className="px-2 py-4 text-center text-sm text-muted-foreground">
-                Everything this month is scheduled. 🎉
+                No deliverables this month yet. Generate them, or add an ad-hoc one.
               </p>
             ) : (
-              unscheduled.map((d) => (
-                <div
-                  key={d.id}
-                  className="rounded-md border bg-background px-2 py-1.5 text-sm"
-                >
-                  <p className="font-medium">{d.sponsorName}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {deliverableTypeLabel(d.deliverable_type)}
-                    {d.due_date ? ` · due ${formatDate(d.due_date)}` : ""}
-                  </p>
-                </div>
-              ))
+              scheduling.map((g) => {
+                const done = g.remaining === 0;
+                return (
+                  <div key={g.sponsorId} className="rounded-md border bg-background p-2">
+                    <div className="flex items-center justify-between gap-2">
+                      <Link
+                        href={`/sponsors/${g.sponsorId}`}
+                        className="truncate text-sm font-medium hover:underline"
+                      >
+                        {g.sponsorName}
+                      </Link>
+                      <Badge variant={done ? "success" : "warning"}>
+                        {done ? "All scheduled" : `${g.scheduled}/${g.owed}`}
+                      </Badge>
+                    </div>
+                    <div className="mt-1 flex flex-wrap gap-1">
+                      {g.byType.map((t) => (
+                        <span
+                          key={t.deliverable_type}
+                          className={cn(
+                            "rounded px-1.5 py-0.5 text-[11px]",
+                            t.scheduled >= t.owed
+                              ? "bg-success/10 text-success"
+                              : "bg-warning/10 text-warning",
+                          )}
+                          title={deliverableTypeLabel(t.deliverable_type)}
+                        >
+                          {deliverableTypeLabel(t.deliverable_type)} {t.scheduled}/{t.owed}
+                        </span>
+                      ))}
+                    </div>
+                    {g.remaining > 0 && (
+                      <p className="mt-1 text-[11px] text-muted-foreground">
+                        {g.remaining} still to schedule — open a slot to assign.
+                      </p>
+                    )}
+                  </div>
+                );
+              })
             )}
           </div>
         </div>
         <p className="px-1 text-xs text-muted-foreground">
-          Open a slot to assign an unscheduled deliverable to it.
+          Green = fully scheduled. Amber = still owes scheduling. Use{" "}
+          <strong>Add deliverable</strong> to place an extra ad, or overbook a slot
+          when assigning.
         </p>
       </aside>
 
