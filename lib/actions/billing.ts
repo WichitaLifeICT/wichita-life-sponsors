@@ -23,16 +23,17 @@ async function upsertPeriod(
     .eq("period_start", periodStart)
     .maybeSingle();
 
-  if (existing) {
-    await supabase.from("billing_periods").update(patch).eq("id", existing.id);
-  } else {
-    await supabase.from("billing_periods").insert({
-      organization_id: session.organization.id,
-      sponsor_id: sponsorId,
-      period_start: periodStart,
-      period_end: periodEnd,
-      ...patch,
-    });
+  const { error } = existing
+    ? await supabase.from("billing_periods").update(patch).eq("id", existing.id)
+    : await supabase.from("billing_periods").insert({
+        organization_id: session.organization.id,
+        sponsor_id: sponsorId,
+        period_start: periodStart,
+        period_end: periodEnd,
+        ...patch,
+      });
+  if (error) {
+    console.error("billing_periods write failed:", error);
   }
 
   revalidatePath("/billing");
