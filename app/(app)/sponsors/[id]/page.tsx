@@ -37,6 +37,7 @@ import {
 } from "@/components/sponsors/badges";
 import { ArchiveSponsorDialog } from "@/components/sponsors/archive-sponsor-dialog";
 import { formatCurrency, formatDate, formatMonth, humanize } from "@/lib/format";
+import { deliverableTypeLabel } from "@/lib/labels";
 
 export async function generateMetadata({
   params,
@@ -269,7 +270,7 @@ export default async function SponsorDetailPage({
                     <ul className="space-y-1 text-sm">
                       {upcoming.slice(0, 5).map((d) => (
                         <li key={d.id} className="flex justify-between gap-2">
-                          <span>{humanize(d.deliverable_type)}</span>
+                          <span>{deliverableTypeLabel(d.deliverable_type)}</span>
                           <span className="text-muted-foreground">
                             {formatDate(d.scheduled_date)}
                           </span>
@@ -311,7 +312,7 @@ export default async function SponsorDetailPage({
                   <TableBody>
                     {upcoming.map((d) => (
                       <TableRow key={d.id}>
-                        <TableCell>{humanize(d.deliverable_type)}</TableCell>
+                        <TableCell>{deliverableTypeLabel(d.deliverable_type)}</TableCell>
                         <TableCell className="text-muted-foreground">
                           {formatMonth(d.original_service_month)}
                         </TableCell>

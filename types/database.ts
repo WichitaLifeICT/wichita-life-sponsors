@@ -15,7 +15,10 @@ export type BillingFrequency =
   | "monthly" | "quarterly" | "annually" | "one_time" | "custom";
 
 export type DeliverableType =
-  | "newsletter_placement" | "dedicated_email" | "social_post" | "social_story"
+  | "newsletter_placement"
+  | "newsletter_headline" | "newsletter_feature" | "newsletter_lower"
+  | "event_banner"
+  | "dedicated_email" | "social_post" | "social_story"
   | "social_reel" | "website_banner" | "podcast_mention" | "event_sponsorship" | "custom";
 
 export type Recurrence = "monthly" | "quarterly" | "annually" | "one_time" | "custom";

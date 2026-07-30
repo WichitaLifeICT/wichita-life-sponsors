@@ -10,6 +10,10 @@ const BILLING_FREQUENCY = [
 
 const DELIVERABLE_TYPE = [
   "newsletter_placement",
+  "newsletter_headline",
+  "newsletter_feature",
+  "newsletter_lower",
+  "event_banner",
   "dedicated_email",
   "social_post",
   "social_story",

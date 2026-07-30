@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { PackageActions } from "@/components/packages/package-actions";
 import { formatCurrency, humanize } from "@/lib/format";
+import { deliverableTypeLabel } from "@/lib/labels";
 
 export const metadata: Metadata = { title: "Packages — Wichita Life" };
 
@@ -80,7 +81,7 @@ export default async function PackagesPage() {
                     <ul className="space-y-0.5 text-sm">
                       {p.rules.map((r) => (
                         <li key={r.id} className="flex justify-between gap-2">
-                          <span>{humanize(r.deliverable_type)}</span>
+                          <span>{deliverableTypeLabel(r.deliverable_type)}</span>
                           <span className="text-muted-foreground">
                             {r.quantity}× {humanize(r.recurrence).toLowerCase()}
                           </span>

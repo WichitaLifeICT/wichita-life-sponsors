@@ -11,6 +11,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { RulesEditor, type RuleRow } from "@/components/packages/rules-editor";
 import { humanize } from "@/lib/format";
+import { deliverableTypeLabel } from "@/lib/labels";
 
 type Action = (
   prev: SubscriptionActionState,
@@ -62,7 +63,7 @@ export function CustomizePackageForm({
             <ul className="space-y-0.5 text-sm text-muted-foreground">
               {packageRules.map((r, i) => (
                 <li key={i} className="flex justify-between gap-2">
-                  <span>{humanize(r.deliverable_type)}</span>
+                  <span>{deliverableTypeLabel(r.deliverable_type)}</span>
                   <span>
                     {r.quantity}× {humanize(r.recurrence).toLowerCase()}
                   </span>

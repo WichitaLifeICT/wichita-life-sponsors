@@ -12,18 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-
-export const DELIVERABLE_TYPE_OPTIONS = [
-  ["newsletter_placement", "Newsletter placement"],
-  ["dedicated_email", "Dedicated email"],
-  ["social_post", "Social post"],
-  ["social_story", "Social story"],
-  ["social_reel", "Social reel"],
-  ["website_banner", "Website banner"],
-  ["podcast_mention", "Podcast mention"],
-  ["event_sponsorship", "Event sponsorship"],
-  ["custom", "Custom"],
-] as const;
+import { DELIVERABLE_TYPE_OPTIONS } from "@/lib/labels";
 
 export const RECURRENCE_OPTIONS = [
   ["monthly", "Monthly"],
