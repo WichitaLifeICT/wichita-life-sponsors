@@ -85,6 +85,7 @@ export function CalendarBoard({
   const [editing, setEditing] = useState(false);
   const [assignId, setAssignId] = useState("");
   const [busy, setBusy] = useState(false);
+  const [draggingId, setDraggingId] = useState<string | null>(null);
   const [overridePrompt, setOverridePrompt] = useState<{
     deliverableId: string;
     slotId: string;
@@ -121,6 +122,17 @@ export function CalendarBoard({
     }
   }
 
+  // Drop a dragged deliverable onto a slot (moves it, updating its day).
+  function handleDropOnSlot(slotId: string) {
+    const id = draggingId;
+    setDraggingId(null);
+    if (!id) return;
+    const target = slots.find((s) => s.id === slotId);
+    // No-op if it's already in this exact slot.
+    if (target?.assignments.some((a) => a.deliverableId === id)) return;
+    void doAssign(id, slotId);
+  }
+
   const chipLabel = (s: SlotWithAssignments) =>
     s.title || SLOT_LABEL.get(s.slot_type) || s.slot_type;
 
@@ -143,6 +155,10 @@ export function CalendarBoard({
               setEditing(false);
             }}
             chipLabel={chipLabel}
+            dragging={draggingId !== null}
+            onDragStartDeliverable={setDraggingId}
+            onDragEndDeliverable={() => setDraggingId(null)}
+            onDropOnSlot={handleDropOnSlot}
           />
         ) : (
           <AgendaView
@@ -211,7 +227,8 @@ export function CalendarBoard({
           </div>
         </div>
         <p className="px-1 text-xs text-muted-foreground">
-          Green = fully scheduled. Amber = still owes scheduling. Use{" "}
+          Green = fully scheduled. Amber = still owes scheduling. Drag a
+          sponsor chip onto another day’s slot to move it, use{" "}
           <strong>Add deliverable</strong> to place an extra ad, or overbook a slot
           when assigning.
         </p>
@@ -445,12 +462,20 @@ function MonthGrid({
   onNewSlot,
   onOpenSlot,
   chipLabel,
+  dragging,
+  onDragStartDeliverable,
+  onDragEndDeliverable,
+  onDropOnSlot,
 }: {
   month: string;
   slotsByDate: Map<string, SlotWithAssignments[]>;
   onNewSlot: (date: string) => void;
   onOpenSlot: (id: string) => void;
   chipLabel: (s: SlotWithAssignments) => string;
+  dragging: boolean;
+  onDragStartDeliverable: (deliverableId: string) => void;
+  onDragEndDeliverable: () => void;
+  onDropOnSlot: (slotId: string) => void;
 }) {
   const total = daysInMonth(month);
   const offset = firstWeekday(month);
@@ -494,25 +519,49 @@ function MonthGrid({
                   </div>
                   <div className="space-y-1">
                     {daySlots.map((s) => (
-                      <button
+                      <div
                         key={s.id}
-                        onClick={() => onOpenSlot(s.id)}
+                        onDragOver={(e) => e.preventDefault()}
+                        onDrop={(e) => {
+                          e.preventDefault();
+                          onDropOnSlot(s.id);
+                        }}
                         className={cn(
-                          "block w-full truncate rounded border-l-2 px-1.5 py-1 text-left text-xs",
+                          "rounded border-l-2 text-xs",
                           FILL_CLASSES[s.fill],
+                          dragging &&
+                            "outline-dashed outline-1 outline-offset-[-1px] outline-primary/50",
                         )}
-                        title={`${chipLabel(s)} — ${s.assignments.length}/${s.capacity}`}
                       >
-                        <span className="font-medium">{chipLabel(s)}</span>{" "}
-                        <span className="tabular-nums">
-                          {s.assignments.length}/{s.capacity}
-                        </span>
-                        {s.assignments.length > 0 && (
-                          <span className="block truncate text-[10px] opacity-80">
-                            {s.assignments.map((a) => a.sponsorName).join(", ")}
+                        <button
+                          onClick={() => onOpenSlot(s.id)}
+                          className="block w-full truncate px-1.5 py-1 text-left"
+                          title={`${chipLabel(s)} — ${s.assignments.length}/${s.capacity}`}
+                        >
+                          <span className="font-medium">{chipLabel(s)}</span>{" "}
+                          <span className="tabular-nums">
+                            {s.assignments.length}/{s.capacity}
                           </span>
+                        </button>
+                        {s.assignments.length > 0 && (
+                          <div className="flex flex-wrap gap-0.5 px-1 pb-1">
+                            {s.assignments.map((a) => (
+                              <span
+                                key={a.assignmentId}
+                                draggable
+                                onDragStart={() =>
+                                  onDragStartDeliverable(a.deliverableId)
+                                }
+                                onDragEnd={onDragEndDeliverable}
+                                className="max-w-full cursor-grab truncate rounded bg-background/70 px-1 py-0.5 text-[10px] active:cursor-grabbing"
+                                title={`${a.sponsorName} · ${deliverableTypeLabel(a.deliverableType)} — drag to another day's slot to move`}
+                              >
+                                {a.sponsorName}
+                              </span>
+                            ))}
+                          </div>
                         )}
-                      </button>
+                      </div>
                     ))}
                   </div>
                 </>
