@@ -1,6 +1,11 @@
 import { describe, it, expect } from "vitest";
 
-import { monthlyEquivalent, effectiveMonthlyValue } from "@/lib/domain/revenue";
+import {
+  monthlyEquivalent,
+  monthlyEquivalentBasis,
+  effectiveMonthlyValue,
+  effectiveBillingBasis,
+} from "@/lib/domain/revenue";
 import {
   computeInvoiceStatus,
   invoiceBalance,
@@ -18,6 +23,26 @@ describe("monthlyEquivalent", () => {
     expect(monthlyEquivalent(1200, "annually")).toBe(100);
     expect(monthlyEquivalent(1000, "one_time")).toBe(0);
     expect(monthlyEquivalent(250, "custom")).toBe(250);
+  });
+});
+
+describe("monthlyEquivalentBasis", () => {
+  it("keeps a one-time deal's full amount (not 0) for a single period", () => {
+    expect(monthlyEquivalentBasis(1000, "one_time")).toBe(1000);
+    expect(monthlyEquivalentBasis(900, "quarterly")).toBe(300);
+    expect(monthlyEquivalentBasis(1200, "annually")).toBe(100);
+    expect(monthlyEquivalentBasis(500, "monthly")).toBe(500);
+  });
+});
+
+describe("effectiveBillingBasis", () => {
+  it("bills a one-off sponsor its full amount while the monthly run-rate stays 0", () => {
+    const inputs = {
+      sponsorMonthlyPrice: 1500,
+      sponsorBillingFrequency: "one_time" as const,
+    };
+    expect(effectiveBillingBasis(inputs)).toBe(1500);
+    expect(effectiveMonthlyValue(inputs)).toBe(0);
   });
 });
 

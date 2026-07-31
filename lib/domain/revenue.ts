@@ -31,6 +31,30 @@ export function monthlyEquivalent(
   }
 }
 
+/**
+ * Like monthlyEquivalent, but for computing what a single billing PERIOD is
+ * worth (not the recurring run-rate). The only difference: a one-time deal keeps
+ * its full amount (it's billed once in its single period), rather than 0.
+ */
+export function monthlyEquivalentBasis(
+  amount: number | null | undefined,
+  frequency: BillingFrequency,
+): number {
+  const value = typeof amount === "number" ? amount : 0;
+  switch (frequency) {
+    case "quarterly":
+      return value / 3;
+    case "annually":
+      return value / 12;
+    case "one_time":
+      return value;
+    case "monthly":
+    case "custom":
+    default:
+      return value;
+  }
+}
+
 export interface EffectivePriceInputs {
   sponsorMonthlyPrice: number | null;
   sponsorBillingFrequency: BillingFrequency;
@@ -66,4 +90,34 @@ export function effectiveMonthlyValue(inputs: EffectivePriceInputs): number {
   }
 
   return monthlyEquivalent(sponsorMonthlyPrice, sponsorBillingFrequency);
+}
+
+/**
+ * Like effectiveMonthlyValue, but for what a single billing PERIOD is worth.
+ * Identical preference order; the only difference is one-time deals keep their
+ * full amount (see monthlyEquivalentBasis) instead of collapsing to 0. Use this
+ * for period amounts and month-by-month revenue; use effectiveMonthlyValue for
+ * the recurring run-rate ("contracted monthly").
+ */
+export function effectiveBillingBasis(inputs: EffectivePriceInputs): number {
+  const {
+    sponsorMonthlyPrice,
+    sponsorBillingFrequency,
+    subscriptionCustomMonthlyPrice,
+    packageBasePrice,
+    packageBillingFrequency,
+  } = inputs;
+
+  if (
+    typeof subscriptionCustomMonthlyPrice === "number" &&
+    subscriptionCustomMonthlyPrice > 0
+  ) {
+    return subscriptionCustomMonthlyPrice;
+  }
+
+  if (typeof packageBasePrice === "number" && packageBillingFrequency) {
+    return monthlyEquivalentBasis(packageBasePrice, packageBillingFrequency);
+  }
+
+  return monthlyEquivalentBasis(sponsorMonthlyPrice, sponsorBillingFrequency);
 }

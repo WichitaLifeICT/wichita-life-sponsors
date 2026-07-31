@@ -1,6 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import type { Sponsor, BillingFrequency, PaymentMethod } from "@/types/database";
-import { effectiveMonthlyValue } from "@/lib/domain/revenue";
+import { effectiveMonthlyValue, effectiveBillingBasis } from "@/lib/domain/revenue";
 import {
   generatePeriods,
   periodLabel,
@@ -28,14 +28,21 @@ export interface PeriodRow {
   notes: string | null;
 }
 
+/** Per-sponsor pricing: `monthly` is the recurring run-rate (one-time -> 0);
+ *  `basis` is what a single period bills (one-time -> full amount). */
+interface SponsorValue {
+  monthly: number;
+  basis: number;
+}
+
 function buildRows(
   periods: BillingPeriod[],
-  monthlyValue: number,
+  basis: number,
   marks: Map<string, StoredMark>,
 ): PeriodRow[] {
   return periods.map((p) => {
     const mark = marks.get(p.periodStart);
-    const defaultAmount = Math.round(monthlyValue * p.months * 100) / 100;
+    const defaultAmount = Math.round(basis * p.months * 100) / 100;
     return {
       periodStart: p.periodStart,
       periodEnd: p.periodEnd,
@@ -52,7 +59,7 @@ function buildRows(
 async function monthlyValueMap(
   supabase: Awaited<ReturnType<typeof createClient>>,
   sponsors: Sponsor[],
-): Promise<Map<string, number>> {
+): Promise<Map<string, SponsorValue>> {
   const [{ data: subs }, { data: packages }] = await Promise.all([
     supabase
       .from("sponsor_subscriptions")
@@ -74,23 +81,26 @@ async function monthlyValueMap(
         custom_monthly_price: s.custom_monthly_price as number | null,
       });
   }
-  const result = new Map<string, number>();
+  const result = new Map<string, SponsorValue>();
   for (const sp of sponsors) {
     const sub = subBySponsor.get(sp.id);
     const p = sub?.package_id ? pkg.get(sub.package_id) : undefined;
-    result.set(
-      sp.id,
-      effectiveMonthlyValue({
-        sponsorMonthlyPrice: sp.monthly_price,
-        sponsorBillingFrequency: sp.billing_frequency,
-        subscriptionCustomMonthlyPrice: sub?.custom_monthly_price,
-        packageBasePrice: p?.base_price,
-        packageBillingFrequency: p?.billing_frequency ?? null,
-      }),
-    );
+    const inputs = {
+      sponsorMonthlyPrice: sp.monthly_price,
+      sponsorBillingFrequency: sp.billing_frequency,
+      subscriptionCustomMonthlyPrice: sub?.custom_monthly_price,
+      packageBasePrice: p?.base_price,
+      packageBillingFrequency: p?.billing_frequency ?? null,
+    };
+    result.set(sp.id, {
+      monthly: effectiveMonthlyValue(inputs),
+      basis: effectiveBillingBasis(inputs),
+    });
   }
   return result;
 }
+
+const ZERO_VALUE: SponsorValue = { monthly: 0, basis: 0 };
 
 async function marksBySponsor(
   supabase: Awaited<ReturnType<typeof createClient>>,
@@ -159,14 +169,14 @@ export async function getBillingOverview(): Promise<BillingOverview> {
 
   let collected = 0;
   const rows: BillingOverviewRow[] = sponsors.map((s) => {
-    const mv = values.get(s.id) ?? 0;
+    const v = values.get(s.id) ?? ZERO_VALUE;
     const periods = generatePeriods(
       s.contract_start_date,
       s.billing_frequency,
       today,
       s.contract_end_date,
     );
-    const periodRows = buildRows(periods, mv, marks.get(s.id) ?? new Map());
+    const periodRows = buildRows(periods, v.basis, marks.get(s.id) ?? new Map());
     const unpaid = periodRows.filter((p) => !p.paid);
     collected += periodRows
       .filter((p) => p.paid)
@@ -175,7 +185,7 @@ export async function getBillingOverview(): Promise<BillingOverview> {
       sponsorId: s.id,
       sponsorName: s.company_name,
       frequency: s.billing_frequency,
-      monthlyValue: mv,
+      monthlyValue: v.monthly,
       unpaidCount: unpaid.length,
       outstanding: unpaid.reduce((sum, p) => sum + p.amount, 0),
       latestPaid: periodRows.length ? periodRows[periodRows.length - 1].paid : null,
@@ -220,7 +230,7 @@ export async function getSponsorBilling(
   const s = sponsor as Sponsor;
 
   const values = await monthlyValueMap(supabase, [s]);
-  const mv = values.get(s.id) ?? 0;
+  const v = values.get(s.id) ?? ZERO_VALUE;
   const marks = (await marksBySponsor(supabase, [s.id])).get(s.id) ?? new Map();
 
   const periods = generatePeriods(
@@ -229,14 +239,14 @@ export async function getSponsorBilling(
     todayISO(),
     s.contract_end_date,
   );
-  const rows = buildRows(periods, mv, marks);
+  const rows = buildRows(periods, v.basis, marks);
 
   const totalDue = rows.reduce((sum, r) => sum + r.amount, 0);
   const totalPaid = rows.filter((r) => r.paid).reduce((sum, r) => sum + r.amount, 0);
 
   return {
     sponsor: s,
-    monthlyValue: mv,
+    monthlyValue: v.monthly,
     rows,
     totalDue,
     totalPaid,
@@ -280,14 +290,14 @@ export async function getMonthlyRevenue(
 
   const bucket = new Map<string, { billed: number; collected: number }>();
   for (const s of sponsors) {
-    const mv = values.get(s.id) ?? 0;
+    const v = values.get(s.id) ?? ZERO_VALUE;
     const periods = generatePeriods(
       s.contract_start_date,
       s.billing_frequency,
       `${throughMonth}-28`,
       s.contract_end_date,
     );
-    const rows = buildRows(periods, mv, marks.get(s.id) ?? new Map());
+    const rows = buildRows(periods, v.basis, marks.get(s.id) ?? new Map());
     for (const r of rows) {
       const m = r.periodStart.slice(0, 7);
       if (m < fromMonth || m > throughMonth) continue;

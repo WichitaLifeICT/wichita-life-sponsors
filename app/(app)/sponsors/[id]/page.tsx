@@ -94,11 +94,13 @@ export default async function SponsorDetailPage({
     completedThisMonth,
     upcoming,
     behind,
+    allDeliverables,
     invoices,
     payments,
     isCustomized,
   } = detail;
   const monthParam = serviceMonth.slice(0, 7);
+  const today = new Date().toISOString().slice(0, 10);
 
   const unpaidPeriods = billing?.rows.filter((r) => !r.paid) ?? [];
   const hasPeriods = (billing?.rows.length ?? 0) > 0;
@@ -368,7 +370,10 @@ export default async function SponsorDetailPage({
           <Card>
             <CardHeader className="flex-row items-center justify-between space-y-0">
               <CardTitle className="text-base">
-                Upcoming &amp; scheduled deliverables
+                All deliverables
+                <span className="ml-2 text-sm font-normal text-muted-foreground">
+                  {allDeliverables.length} total · past, upcoming &amp; scheduled
+                </span>
               </CardTitle>
               <AddDeliverableDialog
                 sponsors={[]}
@@ -384,11 +389,11 @@ export default async function SponsorDetailPage({
               />
             </CardHeader>
             <CardContent>
-              {upcoming.length === 0 ? (
+              {allDeliverables.length === 0 ? (
                 <EmptyState
                   icon={PackagePlus}
-                  title="No scheduled deliverables"
-                  description="Generated and scheduled deliverables will appear here. The full workspace ships in a later stage."
+                  title="No deliverables yet"
+                  description="Generate a month or log a deliverable and it will appear here."
                 />
               ) : (
                 <Table>
@@ -398,23 +403,47 @@ export default async function SponsorDetailPage({
                       <TableHead>Service month</TableHead>
                       <TableHead>Status</TableHead>
                       <TableHead>Scheduled</TableHead>
+                      <TableHead>Due</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {upcoming.map((d) => (
-                      <TableRow key={d.id}>
-                        <TableCell>{deliverableTypeLabel(d.deliverable_type)}</TableCell>
-                        <TableCell className="text-muted-foreground">
-                          {formatMonth(d.original_service_month)}
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant="outline">{humanize(d.status)}</Badge>
-                        </TableCell>
-                        <TableCell className="text-muted-foreground">
-                          {formatDate(d.scheduled_date)}
-                        </TableCell>
-                      </TableRow>
-                    ))}
+                    {allDeliverables.map((d) => {
+                      const overdue =
+                        !["published", "skipped", "canceled"].includes(
+                          d.status,
+                        ) &&
+                        ((d.due_date && d.due_date < today) ||
+                          d.service_month < serviceMonth);
+                      return (
+                        <TableRow key={d.id}>
+                          <TableCell>
+                            <Link
+                              href={`/deliverables/${d.id}`}
+                              className="font-medium hover:underline"
+                            >
+                              {deliverableTypeLabel(d.deliverable_type)}
+                            </Link>
+                          </TableCell>
+                          <TableCell className="text-muted-foreground">
+                            {formatMonth(d.original_service_month)}
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-1.5">
+                              <DeliverableStatusBadge status={d.status} />
+                              {overdue && (
+                                <Badge variant="warning">Past due</Badge>
+                              )}
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-muted-foreground">
+                            {d.scheduled_date ? formatDate(d.scheduled_date) : "—"}
+                          </TableCell>
+                          <TableCell className="text-muted-foreground">
+                            {d.due_date ? formatDate(d.due_date) : "—"}
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
                   </TableBody>
                 </Table>
               )}

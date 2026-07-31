@@ -97,7 +97,13 @@ export async function addManualDeliverable(
     asset_status: "missing",
   });
 
-  if (error) return { error: "Could not add the deliverable. Please try again." };
+  if (error) {
+    console.error("addManualDeliverable failed:", error);
+    const hint = /invalid input value for enum/i.test(error.message)
+      ? " (Run migration 0003 in Supabase to enable the email ad-slot types.)"
+      : "";
+    return { error: `Could not add the deliverable: ${error.message}${hint}` };
+  }
 
   const returnTo = String(formData.get("return_to") ?? "");
   revalidatePath("/deliverables");
