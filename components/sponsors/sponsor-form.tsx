@@ -33,6 +33,7 @@ export interface SponsorFormDefaults {
   company_name?: string;
   status?: string;
   website?: string;
+  analytics_url?: string;
   industry?: string;
   primary_contact_name?: string;
   primary_contact_email?: string;
@@ -164,6 +165,20 @@ export function SponsorForm({
               placeholder="https://…"
               defaultValue={defaults.website}
             />
+          </div>
+          <div className="space-y-2 sm:col-span-2">
+            <Label htmlFor="analytics_url">Analytics sheet</Label>
+            <Input
+              id="analytics_url"
+              name="analytics_url"
+              placeholder="https://docs.google.com/spreadsheets/…"
+              defaultValue={defaults.analytics_url}
+            />
+            <FieldError errors={fe.analytics_url} />
+            <p className="text-xs text-muted-foreground">
+              Link to this partner’s analytics (e.g. a Google Sheet). Shows as a
+              clickable link on their profile.
+            </p>
           </div>
         </CardContent>
       </Card>

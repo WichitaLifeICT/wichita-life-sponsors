@@ -44,6 +44,16 @@ const optionalEmail = z
     message: "Enter a valid email address.",
   });
 
+const optionalUrl = z
+  .string()
+  .trim()
+  .max(1000)
+  .optional()
+  .transform((v) => (v ? v : undefined))
+  .refine((v) => !v || /^https?:\/\//i.test(v), {
+    message: "Enter a full URL starting with http:// or https://",
+  });
+
 const optionalDate = z
   .string()
   .trim()
@@ -70,6 +80,7 @@ export const sponsorSchema = z
     company_name: z.string().trim().min(1, "Company name is required.").max(200),
     status: z.enum(SPONSOR_STATUS),
     website: optionalText,
+    analytics_url: optionalUrl,
     industry: optionalText,
     primary_contact_name: optionalText,
     primary_contact_email: optionalEmail,

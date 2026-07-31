@@ -69,6 +69,7 @@ export interface Sponsor {
   company_name: string;
   status: SponsorStatus;
   website: string | null;
+  analytics_url: string | null;
   industry: string | null;
   primary_contact_name: string | null;
   primary_contact_email: string | null;

@@ -40,6 +40,7 @@ function sponsorRow(orgId: string, v: SponsorParsed) {
     company_name: v.company_name,
     status: v.status,
     website: v.website ?? null,
+    analytics_url: v.analytics_url ?? null,
     industry: v.industry ?? null,
     primary_contact_name: v.primary_contact_name ?? null,
     primary_contact_email: v.primary_contact_email ?? null,

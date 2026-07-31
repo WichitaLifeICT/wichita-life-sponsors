@@ -55,6 +55,7 @@ export default async function EditSponsorPage({
     company_name: sponsor.company_name,
     status: sponsor.status,
     website: sponsor.website ?? undefined,
+    analytics_url: sponsor.analytics_url ?? undefined,
     industry: sponsor.industry ?? undefined,
     primary_contact_name: sponsor.primary_contact_name ?? undefined,
     primary_contact_email: sponsor.primary_contact_email ?? undefined,

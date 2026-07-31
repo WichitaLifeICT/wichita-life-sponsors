@@ -8,6 +8,7 @@ import {
   CircleDollarSign,
   Sparkles,
   Boxes,
+  LineChart,
 } from "lucide-react";
 
 import { getSponsorDetail } from "@/lib/data/sponsors";
@@ -145,6 +146,18 @@ export default async function SponsorDetailPage({
                 Payments
               </Link>
             </Button>
+            {sponsor.analytics_url && (
+              <Button asChild variant="outline" size="sm">
+                <a
+                  href={sponsor.analytics_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <LineChart className="size-4" />
+                  Analytics
+                </a>
+              </Button>
+            )}
             <ArchiveSponsorDialog
               sponsorId={id}
               companyName={sponsor.company_name}
@@ -242,6 +255,21 @@ export default async function SponsorDetailPage({
                   <SponsorStatusBadge status={sponsor.status} />
                 </Fact>
                 <Fact label="Package">{pkg?.name ?? "—"}</Fact>
+                <Fact label="Analytics">
+                  {sponsor.analytics_url ? (
+                    <a
+                      href={sponsor.analytics_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 text-primary hover:underline"
+                    >
+                      <LineChart className="size-3.5" />
+                      Open sheet
+                    </a>
+                  ) : (
+                    "—"
+                  )}
+                </Fact>
                 <Fact label="Monthly value">
                   {monthlyValue > 0 ? formatCurrency(monthlyValue) : "—"}
                 </Fact>
