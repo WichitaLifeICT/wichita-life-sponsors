@@ -26,7 +26,14 @@ const WEEKDAYS = [
   ["6", "Sat"],
 ] as const;
 const DEFAULT_ON = new Set(["1", "3", "4", "5"]);
-const TIERS = ["Headline", "Feature", "Lower", "Event banner"];
+// [value, weekday-only note]. A note means the tier is only created on that day.
+const TIERS: readonly (readonly [string, string?])[] = [
+  ["Headline"],
+  ["Feature"],
+  ["Lower"],
+  ["Event banner"],
+  ["Deep Dive", "Wed only"],
+];
 
 function SubmitButton() {
   const { pending } = useFormStatus();
@@ -88,7 +95,7 @@ export function GenerateEmailsDialog({ month }: { month: string }) {
           <div className="space-y-2">
             <Label>Ad slots per email</Label>
             <div className="flex flex-wrap gap-2">
-              {TIERS.map((t) => (
+              {TIERS.map(([t, note]) => (
                 <label
                   key={t}
                   className="flex items-center gap-1.5 rounded-md border px-2.5 py-1.5 text-sm"
@@ -101,6 +108,9 @@ export function GenerateEmailsDialog({ month }: { month: string }) {
                     className="size-4 rounded border-input"
                   />
                   {t}
+                  {note && (
+                    <span className="text-xs text-muted-foreground">({note})</span>
+                  )}
                 </label>
               ))}
             </div>

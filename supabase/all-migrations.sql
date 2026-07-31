@@ -698,3 +698,12 @@ create policy "sponsor_assets_org_all" on storage.objects
     and (storage.foldername(name))[1] = public.auth_org_id()::text
   );
 
+
+
+-- =============================================================================
+-- >>> 20260101000009_deep_dive.sql <<<
+-- Add the "Deep Dive (sponsored)" deliverable type (Wednesday email only).
+-- ALTER TYPE ... ADD VALUE must run outside a transaction.
+-- =============================================================================
+
+alter type deliverable_type add value if not exists 'deep_dive_sponsored';

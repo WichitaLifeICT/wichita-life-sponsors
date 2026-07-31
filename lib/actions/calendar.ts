@@ -65,6 +65,10 @@ export async function updateSlot(
 
 const DEFAULT_TIERS = ["Headline", "Feature", "Lower", "Event banner"];
 
+// Tiers that only run on specific weekdays (0=Sun … 6=Sat), regardless of which
+// send days are chosen. The Deep Dive (sponsored) segment is Wednesday-only.
+const TIER_WEEKDAYS: Record<string, number> = { "Deep Dive": 3 };
+
 /**
  * Auto-create email ad slots for a month. For each selected send day
  * (defaults to Mon/Wed/Thu/Fri) it creates one newsletter slot per selected ad
@@ -109,6 +113,9 @@ export async function generateEmailSlots(month: string, formData: FormData) {
     if (!weekdays.has(weekday)) continue;
     const date = `${month}-${String(day).padStart(2, "0")}`;
     for (const tier of tiers) {
+      // Weekday-restricted tiers (e.g. Deep Dive = Wednesday) only appear on
+      // their day, even if other send days are selected.
+      if (tier in TIER_WEEKDAYS && TIER_WEEKDAYS[tier] !== weekday) continue;
       if (taken.has(`${date}|${tier}`)) continue;
       toInsert.push({
         organization_id: session.organization.id,

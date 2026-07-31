@@ -40,6 +40,7 @@ export const DELIVERABLE_TYPE_OPTIONS: readonly (readonly [string, string])[] = 
   ["newsletter_feature", "Email — Feature"],
   ["newsletter_lower", "Email — Lower"],
   ["event_banner", "Email — Event banner"],
+  ["deep_dive_sponsored", "Deep Dive (sponsored)"],
   ["dedicated_email", "Dedicated email"],
   ["social_post", "Social post"],
   ["social_story", "Social story"],
