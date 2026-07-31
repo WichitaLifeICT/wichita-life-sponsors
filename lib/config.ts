@@ -9,6 +9,9 @@ export const DEFAULT_LOCALE = "en-US";
 /** Contracts within this many days are considered "expiring soon". */
 export const CONTRACT_EXPIRY_WARNING_DAYS = 60;
 
+/** Month the business started tracking revenue in the app ("YYYY-MM"). */
+export const REVENUE_START_MONTH = "2026-08";
+
 /** Sponsor asset storage. */
 export const ASSET_BUCKET = "sponsor-assets";
 export const MAX_ASSET_MB = 15;

@@ -14,8 +14,23 @@ import {
 
 import { getSessionContext } from "@/lib/data/session";
 import { getDashboardData } from "@/lib/data/dashboard";
+import { getMonthlyRevenue } from "@/lib/data/billing";
 import { currentServiceMonth } from "@/lib/domain/dates";
-import { formatCurrency, formatCurrencyShort, formatDate, formatMonth } from "@/lib/format";
+import { REVENUE_START_MONTH } from "@/lib/config";
+import {
+  formatCurrency,
+  formatCurrencyShort,
+  formatDate,
+  formatMonth,
+} from "@/lib/format";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { PageHeader } from "@/components/layout/page-header";
 import { MonthPicker } from "@/components/deliverables/month-picker";
 import { FulfillmentSummary } from "@/components/deliverables/fulfillment-summary";
@@ -69,10 +84,23 @@ export default async function DashboardPage({
       ? monthParam
       : currentServiceMonth().slice(0, 7);
 
-  const [session, d] = await Promise.all([
+  const currentMonth = currentServiceMonth().slice(0, 7);
+  const throughMonth = month > currentMonth ? month : currentMonth;
+  const fromMonth =
+    REVENUE_START_MONTH > throughMonth ? throughMonth : REVENUE_START_MONTH;
+
+  const [session, d, revenueSeries] = await Promise.all([
     getSessionContext(),
     getDashboardData(month),
+    getMonthlyRevenue(fromMonth, throughMonth),
   ]);
+  const selectedRevenue =
+    revenueSeries.find((r) => r.month === month) ?? {
+      month,
+      billed: 0,
+      collected: 0,
+      outstanding: 0,
+    };
   const firstName =
     session?.profile?.full_name?.split(" ")[0] ??
     session?.email?.split("@")[0] ??
@@ -183,15 +211,72 @@ export default async function DashboardPage({
         <FulfillmentSummary data={d.fulfillment} />
       </div>
 
-      {/* Revenue */}
+      {/* Revenue — selected month */}
       <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Revenue</CardTitle>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base">
+            Revenue · {formatMonth(`${month}-01`)}
+          </CardTitle>
         </CardHeader>
         <CardContent className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-          <Rev label="Contracted monthly" value={formatCurrency(d.revenue.contracted)} />
-          <Rev label="Collected (all periods)" value={formatCurrency(d.revenue.collected)} />
-          <Rev label="Outstanding" value={formatCurrency(d.revenue.outstanding)} />
+          <Rev label="Billed this month" value={formatCurrency(selectedRevenue.billed)} />
+          <Rev
+            label="Collected this month"
+            value={formatCurrency(selectedRevenue.collected)}
+          />
+          <Rev
+            label={
+              selectedRevenue.outstanding > 0 ? "Not yet collected" : "Outstanding"
+            }
+            value={formatCurrency(selectedRevenue.outstanding)}
+            accent={selectedRevenue.outstanding > 0}
+          />
+        </CardContent>
+      </Card>
+
+      {/* Monthly revenue table */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base">Monthly revenue</CardTitle>
+          <p className="text-sm text-muted-foreground">
+            Billed vs. collected since {formatMonth(`${fromMonth}-01`)}.
+          </p>
+        </CardHeader>
+        <CardContent className="px-0 pb-0">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Month</TableHead>
+                <TableHead className="text-right">Billed</TableHead>
+                <TableHead className="text-right">Collected</TableHead>
+                <TableHead className="text-right">Outstanding</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {[...revenueSeries].reverse().map((r) => (
+                <TableRow key={r.month}>
+                  <TableCell className="font-medium">
+                    {formatMonth(`${r.month}-01`)}
+                  </TableCell>
+                  <TableCell className="text-right tabular-nums">
+                    {formatCurrency(r.billed)}
+                  </TableCell>
+                  <TableCell className="text-right tabular-nums text-success">
+                    {formatCurrency(r.collected)}
+                  </TableCell>
+                  <TableCell className="text-right tabular-nums">
+                    {r.outstanding > 0 ? (
+                      <span className="text-warning">
+                        {formatCurrency(r.outstanding)}
+                      </span>
+                    ) : (
+                      <span className="text-muted-foreground">—</span>
+                    )}
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
         </CardContent>
       </Card>
     </div>
@@ -211,11 +296,23 @@ function AttnRow({ show, href, label }: { show: boolean; href: string; label: st
   );
 }
 
-function Rev({ label, value }: { label: string; value: string }) {
+function Rev({
+  label,
+  value,
+  accent,
+}: {
+  label: string;
+  value: string;
+  accent?: boolean;
+}) {
   return (
     <div className="rounded-lg border p-4">
       <p className="text-xs text-muted-foreground">{label}</p>
-      <p className="text-xl font-semibold tabular-nums">{value}</p>
+      <p
+        className={`text-xl font-semibold tabular-nums${accent ? " text-warning" : ""}`}
+      >
+        {value}
+      </p>
     </div>
   );
 }

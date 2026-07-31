@@ -6,7 +6,7 @@ import {
   periodLabel,
   type BillingPeriod,
 } from "@/lib/domain/billing-periods";
-import { todayISO } from "@/lib/domain/dates";
+import { todayISO, addMonths } from "@/lib/domain/dates";
 
 interface StoredMark {
   id: string;
@@ -242,4 +242,75 @@ export async function getSponsorBilling(
     totalPaid,
     outstanding: totalDue - totalPaid,
   };
+}
+
+export interface MonthlyRevenue {
+  month: string; // "YYYY-MM"
+  billed: number;
+  collected: number;
+  outstanding: number;
+}
+
+/**
+ * Revenue broken down by calendar month, from `fromMonth` through `throughMonth`
+ * (inclusive). A billing period's amount is attributed to the month it starts in
+ * (so a quarterly charge shows in its first month). "collected" counts periods
+ * marked paid. Months with no billing show as zeros.
+ */
+export async function getMonthlyRevenue(
+  fromMonth: string,
+  throughMonth: string,
+): Promise<MonthlyRevenue[]> {
+  const supabase = await createClient();
+
+  const { data: sponsorsData } = await supabase
+    .from("sponsors")
+    .select("*")
+    .neq("status", "archived")
+    .not("contract_start_date", "is", null);
+  const sponsors = (sponsorsData ?? []) as Sponsor[];
+
+  const [values, marks] = await Promise.all([
+    monthlyValueMap(supabase, sponsors),
+    marksBySponsor(
+      supabase,
+      sponsors.map((s) => s.id),
+    ),
+  ]);
+
+  const bucket = new Map<string, { billed: number; collected: number }>();
+  for (const s of sponsors) {
+    const mv = values.get(s.id) ?? 0;
+    const periods = generatePeriods(
+      s.contract_start_date,
+      s.billing_frequency,
+      `${throughMonth}-28`,
+      s.contract_end_date,
+    );
+    const rows = buildRows(periods, mv, marks.get(s.id) ?? new Map());
+    for (const r of rows) {
+      const m = r.periodStart.slice(0, 7);
+      if (m < fromMonth || m > throughMonth) continue;
+      const b = bucket.get(m) ?? { billed: 0, collected: 0 };
+      b.billed += r.amount;
+      if (r.paid) b.collected += r.amount;
+      bucket.set(m, b);
+    }
+  }
+
+  const series: MonthlyRevenue[] = [];
+  let cur = `${fromMonth}-01`;
+  // Guard against a bad range.
+  for (let i = 0; i < 240 && cur.slice(0, 7) <= throughMonth; i++) {
+    const m = cur.slice(0, 7);
+    const b = bucket.get(m) ?? { billed: 0, collected: 0 };
+    series.push({
+      month: m,
+      billed: Math.round(b.billed * 100) / 100,
+      collected: Math.round(b.collected * 100) / 100,
+      outstanding: Math.round((b.billed - b.collected) * 100) / 100,
+    });
+    cur = addMonths(cur, 1);
+  }
+  return series;
 }
