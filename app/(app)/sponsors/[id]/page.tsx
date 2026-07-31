@@ -6,7 +6,6 @@ import {
   PackagePlus,
   FilePlus2,
   CircleDollarSign,
-  Upload,
   Sparkles,
   Boxes,
 } from "lucide-react";
@@ -225,7 +224,9 @@ export default async function SponsorDetailPage({
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="deliverables">Deliverables</TabsTrigger>
           <TabsTrigger value="billing">Billing</TabsTrigger>
-          <TabsTrigger value="assets">Assets</TabsTrigger>
+          <TabsTrigger value="assets" className="text-muted-foreground">
+            Assets
+          </TabsTrigger>
           <TabsTrigger value="notes">Notes</TabsTrigger>
         </TabsList>
 
@@ -572,24 +573,27 @@ export default async function SponsorDetailPage({
           </div>
         </TabsContent>
 
-        {/* Assets */}
+        {/* Assets (de-emphasized — not actively tracked) */}
         <TabsContent value="assets">
-          <Card>
+          <Card className="border-dashed bg-muted/30">
             <CardHeader className="flex-row items-center justify-between space-y-0">
-              <CardTitle className="text-base">Assets</CardTitle>
+              <div>
+                <CardTitle className="text-base text-muted-foreground">
+                  Assets
+                </CardTitle>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Asset storage is turned off for now — deliverables won’t be
+                  flagged for missing assets. You can still upload here if you
+                  want to keep something on file.
+                </p>
+              </div>
               {orgId && <AssetUploader sponsorId={id} orgId={orgId} />}
             </CardHeader>
-            <CardContent>
-              {sponsorAssets.length === 0 ? (
-                <EmptyState
-                  icon={Upload}
-                  title="No assets yet"
-                  description="Upload logos, photos, contracts, ad copy, and more — or add an external link."
-                />
-              ) : (
+            {sponsorAssets.length > 0 && (
+              <CardContent>
                 <AssetGrid assets={sponsorAssets} />
-              )}
-            </CardContent>
+              </CardContent>
+            )}
           </Card>
         </TabsContent>
 

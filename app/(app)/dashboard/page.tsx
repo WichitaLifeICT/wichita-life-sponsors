@@ -6,7 +6,6 @@ import {
   AlertCircle,
   CalendarClock,
   CalendarX,
-  ImageOff,
   FileWarning,
   Boxes,
   ArrowRight,
@@ -123,7 +122,6 @@ export default async function DashboardPage({
         <StatCard label="Outstanding" value={formatCurrencyShort(d.cards.outstanding)} icon={AlertCircle} href="/billing" alert={d.cards.outstanding > 0} />
         <StatCard label="Due this week" value={String(d.cards.dueThisWeek)} icon={CalendarClock} href={`/deliverables${m}`} alert={d.cards.dueThisWeek > 0} />
         <StatCard label="Unscheduled this month" value={String(d.cards.unscheduledThisMonth)} icon={CalendarX} href={`/deliverables${m}&scheduled=unscheduled`} alert={d.cards.unscheduledThisMonth > 0} />
-        <StatCard label="Missing assets" value={String(d.cards.missingAssets)} icon={ImageOff} href={`/deliverables${m}&asset=missing`} alert={d.cards.missingAssets > 0} />
         <StatCard label="Expiring ≤60 days" value={String(d.cards.expiring60)} icon={FileWarning} href="/sponsors?expiring=1" alert={d.cards.expiring60 > 0} />
         <StatCard label="Open ad spots" value={String(d.cards.openInventory)} icon={Boxes} href={`/calendar${m}&fill=open`} />
       </div>
@@ -137,7 +135,6 @@ export default async function DashboardPage({
           <CardContent className="space-y-2 text-sm">
             <AttnRow show={d.needsAttention.pastDue > 0} href={`/deliverables${m}&overdue=1`} label={`${d.needsAttention.pastDue} deliverable(s) past due`} />
             <AttnRow show={d.needsAttention.unpaidSponsors > 0} href="/billing" label={`${d.needsAttention.unpaidSponsors} sponsor(s) with an unpaid balance`} />
-            <AttnRow show={d.needsAttention.missingAssetsUpcoming > 0} href={`/deliverables${m}&asset=missing`} label={`${d.needsAttention.missingAssetsUpcoming} upcoming placement(s) missing assets`} />
             {d.needsAttention.expiring.map((e) => (
               <AttnRow key={e.id} show href={`/sponsors/${e.id}`} label={`${e.name} — contract expires in ${e.days} day(s)`} />
             ))}
@@ -146,7 +143,6 @@ export default async function DashboardPage({
             ))}
             {d.needsAttention.pastDue === 0 &&
               d.needsAttention.unpaidSponsors === 0 &&
-              d.needsAttention.missingAssetsUpcoming === 0 &&
               d.needsAttention.expiring.length === 0 &&
               d.needsAttention.noPackage.length === 0 && (
                 <p className="py-4 text-center text-muted-foreground">

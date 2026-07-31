@@ -26,5 +26,9 @@ export function DeliverableStatusBadge({ status }: { status: string }) {
 }
 
 export function AssetStatusBadge({ status }: { status: string }) {
+  // Asset tracking is de-emphasized: an empty "missing"/"not_needed" state is
+  // noise (there's nothing to store), so only surface a badge when an asset has
+  // actually been received or is partially in.
+  if (!status || status === "missing" || status === "not_needed") return null;
   return <Badge variant={ASSET_VARIANT[status] ?? "outline"}>{humanize(status)}</Badge>;
 }
