@@ -192,10 +192,13 @@ async function autoGenerateForSponsor(
   v: SponsorParsed,
 ) {
   if (!v.package_id || !v.auto_generate_deliverables) return;
-  const months = new Set<string>([
-    currentServiceMonth(),
-    toServiceMonth(v.contract_start_date ?? todayISO()),
-  ]);
+  const current = currentServiceMonth();
+  const startMonth = toServiceMonth(v.contract_start_date ?? todayISO());
+  // Only generate from the current month forward — never backfill past months,
+  // so an existing deal (e.g. started in January) doesn't create a pile of
+  // overdue deliverables. Seed a future start month so upcoming contracts show.
+  const months = new Set<string>([current]);
+  if (startMonth > current) months.add(startMonth);
   for (const m of months) {
     await runGenerationForMonth(m, orgId, userId, sponsorId);
   }
