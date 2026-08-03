@@ -5,12 +5,25 @@ import { redirect } from "next/navigation";
 
 import { createClient } from "@/lib/supabase/server";
 import { getSessionContext } from "@/lib/data/session";
+import { runGenerationForMonth } from "@/lib/data/generation";
+import { getSponsorBilling } from "@/lib/data/billing";
 import { sponsorSchema, type SponsorParsed } from "@/lib/validations/sponsor";
-import { todayISO } from "@/lib/domain/dates";
+import { todayISO, currentServiceMonth, toServiceMonth } from "@/lib/domain/dates";
 
 export interface SponsorActionState {
   error: string | null;
   fieldErrors?: Record<string, string[]>;
+  /** Echoed-back submitted values so the form never loses what was typed. */
+  values?: Record<string, string>;
+}
+
+/** Capture the raw submitted text values to repopulate the form on error. */
+function rawValues(formData: FormData): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const [k, v] of formData.entries()) {
+    if (typeof v === "string") out[k] = v;
+  }
+  return out;
 }
 
 function parseForm(formData: FormData) {
@@ -22,6 +35,8 @@ function parseForm(formData: FormData) {
   raw.stripe_subscription =
     formData.get("stripe_subscription") === "on" ||
     formData.get("stripe_subscription") === "true";
+  raw.mark_paid =
+    formData.get("mark_paid") === "on" || formData.get("mark_paid") === "true";
   raw.save_as_package =
     formData.get("save_as_package") === "on" ||
     formData.get("save_as_package") === "true";
@@ -164,6 +179,64 @@ async function syncSubscription(
   }
 }
 
+/**
+ * After a sponsor's subscription is saved, auto-create its deliverables so the
+ * user doesn't have to run generation manually. Generates for the current
+ * service month and the contract's start month (idempotent, scoped to this
+ * sponsor). No-op when there's no package or auto-generate is off.
+ */
+async function autoGenerateForSponsor(
+  orgId: string,
+  userId: string | null,
+  sponsorId: string,
+  v: SponsorParsed,
+) {
+  if (!v.package_id || !v.auto_generate_deliverables) return;
+  const months = new Set<string>([
+    currentServiceMonth(),
+    toServiceMonth(v.contract_start_date ?? todayISO()),
+  ]);
+  for (const m of months) {
+    await runGenerationForMonth(m, orgId, userId, sponsorId);
+  }
+}
+
+/**
+ * Mark the sponsor's first billing period as already paid — for deals paid
+ * before they were entered here (e.g. a one-time deal). Amount comes from the
+ * computed ledger; paid date is the period's start. No-op if there are no
+ * periods yet (needs a contract start date). Won't un-mark anything.
+ */
+async function markFirstPeriodPaid(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  orgId: string,
+  sponsorId: string,
+) {
+  const billing = await getSponsorBilling(sponsorId);
+  const first = billing?.rows[0];
+  if (!first) return;
+
+  const { data: existing } = await supabase
+    .from("billing_periods")
+    .select("id")
+    .eq("sponsor_id", sponsorId)
+    .eq("period_start", first.periodStart)
+    .maybeSingle();
+
+  const patch = { amount: first.amount, paid: true, paid_date: first.periodStart };
+  if (existing) {
+    await supabase.from("billing_periods").update(patch).eq("id", existing.id);
+  } else {
+    await supabase.from("billing_periods").insert({
+      organization_id: orgId,
+      sponsor_id: sponsorId,
+      period_start: first.periodStart,
+      period_end: first.periodEnd,
+      ...patch,
+    });
+  }
+}
+
 export async function createSponsor(
   _prev: SponsorActionState,
   formData: FormData,
@@ -173,6 +246,7 @@ export async function createSponsor(
     return {
       error: "Please fix the highlighted fields.",
       fieldErrors: parsed.error.flatten().fieldErrors,
+      values: rawValues(formData),
     };
   }
 
@@ -196,8 +270,20 @@ export async function createSponsor(
   }
 
   await syncSubscription(supabase, session.organization.id, inserted.id, parsed.data);
+  await autoGenerateForSponsor(
+    session.organization.id,
+    session.userId,
+    inserted.id,
+    parsed.data,
+  );
+  if (parsed.data.mark_paid) {
+    await markFirstPeriodPaid(supabase, session.organization.id, inserted.id);
+  }
 
   revalidatePath("/sponsors");
+  revalidatePath("/deliverables");
+  revalidatePath("/calendar");
+  revalidatePath("/billing");
   redirect(`/sponsors/${inserted.id}`);
 }
 
@@ -211,6 +297,7 @@ export async function updateSponsor(
     return {
       error: "Please fix the highlighted fields.",
       fieldErrors: parsed.error.flatten().fieldErrors,
+      values: rawValues(formData),
     };
   }
 
@@ -231,9 +318,16 @@ export async function updateSponsor(
   }
 
   await syncSubscription(supabase, session.organization.id, id, parsed.data);
+  await autoGenerateForSponsor(session.organization.id, session.userId, id, parsed.data);
+  if (parsed.data.mark_paid) {
+    await markFirstPeriodPaid(supabase, session.organization.id, id);
+  }
 
   revalidatePath("/sponsors");
   revalidatePath(`/sponsors/${id}`);
+  revalidatePath("/deliverables");
+  revalidatePath("/calendar");
+  revalidatePath("/billing");
   redirect(`/sponsors/${id}`);
 }
 

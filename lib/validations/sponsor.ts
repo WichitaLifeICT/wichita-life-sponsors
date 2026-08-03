@@ -97,6 +97,9 @@ export const sponsorSchema = z
       .optional()
       .or(z.literal("").transform(() => undefined)),
     stripe_subscription: z.coerce.boolean().default(false),
+    // One-shot: mark the sponsor's first billing period as already paid
+    // (e.g. a one-time deal that was paid before it was entered here).
+    mark_paid: z.coerce.boolean().default(false),
     // Package assignment (creates/updates a single active subscription).
     package_id: z
       .string()

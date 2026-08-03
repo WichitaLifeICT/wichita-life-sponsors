@@ -79,6 +79,28 @@ const PAYMENT_METHOD = [
   ["other", "Other"],
 ] as const;
 
+const FIELD_LABELS: Record<string, string> = {
+  company_name: "Company name",
+  status: "Status",
+  website: "Website",
+  analytics_url: "Analytics sheet",
+  industry: "Industry",
+  primary_contact_name: "Primary contact name",
+  primary_contact_email: "Primary contact email",
+  primary_contact_phone: "Primary contact phone",
+  billing_contact_name: "Billing contact name",
+  billing_contact_email: "Billing contact email",
+  contract_start_date: "Contract start",
+  contract_end_date: "Contract end",
+  monthly_price: "Price",
+  billing_frequency: "Billing frequency",
+  payment_method: "Payment method",
+  custom_monthly_price: "Custom monthly price",
+  new_package_name: "New package name",
+  rules: "Deliverables",
+  notes: "Notes",
+};
+
 function FieldError({ errors }: { errors?: string[] }) {
   if (!errors?.length) return null;
   return <p className="text-xs text-destructive">{errors[0]}</p>;
@@ -99,26 +121,51 @@ export function SponsorForm({
 }) {
   const [state, formAction, pending] = useActionState(action, { error: null });
   const fe = state.fieldErrors ?? {};
+  const submitted = state.values ?? {};
+  // Prefer the just-submitted value on error, then the row's default. Keeps the
+  // form fully populated instead of wiping what was typed.
+  const val = (name: keyof SponsorFormDefaults & string): string | undefined =>
+    submitted[name] ?? (defaults[name] as string | undefined);
+
+  // A readable list of every field problem, so it's clear where to look.
+  const errorList = Object.entries(fe).flatMap(([field, msgs]) =>
+    (msgs ?? []).map((msg) => ({ field, msg })),
+  );
 
   // Controlled values for Radix selects (mirrored into hidden inputs).
-  const [status, setStatus] = useState(defaults.status ?? "lead");
+  const [status, setStatus] = useState(
+    submitted.status ?? defaults.status ?? "lead",
+  );
   const [frequency, setFrequency] = useState(
-    defaults.billing_frequency ?? "monthly",
+    submitted.billing_frequency ?? defaults.billing_frequency ?? "monthly",
   );
   const [paymentMethod, setPaymentMethod] = useState(
-    defaults.payment_method ?? "",
+    submitted.payment_method ?? defaults.payment_method ?? "",
   );
-  const [packageId, setPackageId] = useState(defaults.package_id ?? "none");
+  const [packageId, setPackageId] = useState(
+    submitted.package_id ?? defaults.package_id ?? "none",
+  );
 
   return (
     <form action={formAction} className="space-y-6">
       {state.error && (
-        <p
+        <div
           role="alert"
           className="rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive"
         >
-          {state.error}
-        </p>
+          <p className="font-medium">{state.error}</p>
+          {errorList.length > 0 && (
+            <ul className="mt-1 list-disc space-y-0.5 pl-5">
+              {errorList.map(({ field, msg }) => (
+                <li key={`${field}-${msg}`}>
+                  <span className="font-medium">{FIELD_LABELS[field] ?? field}:</span>{" "}
+                  {msg}
+                </li>
+              ))}
+            </ul>
+          )}
+          <p className="mt-1 text-xs">Your entries are kept — just fix the above.</p>
+        </div>
       )}
 
       {/* Company details */}
@@ -132,7 +179,7 @@ export function SponsorForm({
             <Input
               id="company_name"
               name="company_name"
-              defaultValue={defaults.company_name}
+              defaultValue={val("company_name")}
               required
             />
             <FieldError errors={fe.company_name} />
@@ -155,7 +202,7 @@ export function SponsorForm({
           </div>
           <div className="space-y-2">
             <Label htmlFor="industry">Industry</Label>
-            <Input id="industry" name="industry" defaultValue={defaults.industry} />
+            <Input id="industry" name="industry" defaultValue={val("industry")} />
           </div>
           <div className="space-y-2 sm:col-span-2">
             <Label htmlFor="website">Website</Label>
@@ -163,7 +210,7 @@ export function SponsorForm({
               id="website"
               name="website"
               placeholder="https://…"
-              defaultValue={defaults.website}
+              defaultValue={val("website")}
             />
           </div>
           <div className="space-y-2 sm:col-span-2">
@@ -172,7 +219,7 @@ export function SponsorForm({
               id="analytics_url"
               name="analytics_url"
               placeholder="https://docs.google.com/spreadsheets/…"
-              defaultValue={defaults.analytics_url}
+              defaultValue={val("analytics_url")}
             />
             <FieldError errors={fe.analytics_url} />
             <p className="text-xs text-muted-foreground">
@@ -194,7 +241,7 @@ export function SponsorForm({
             <Input
               id="primary_contact_name"
               name="primary_contact_name"
-              defaultValue={defaults.primary_contact_name}
+              defaultValue={val("primary_contact_name")}
             />
           </div>
           <div className="space-y-2">
@@ -202,7 +249,7 @@ export function SponsorForm({
             <Input
               id="primary_contact_phone"
               name="primary_contact_phone"
-              defaultValue={defaults.primary_contact_phone}
+              defaultValue={val("primary_contact_phone")}
             />
           </div>
           <div className="space-y-2 sm:col-span-2">
@@ -211,7 +258,7 @@ export function SponsorForm({
               id="primary_contact_email"
               name="primary_contact_email"
               type="email"
-              defaultValue={defaults.primary_contact_email}
+              defaultValue={val("primary_contact_email")}
             />
             <FieldError errors={fe.primary_contact_email} />
           </div>
@@ -220,7 +267,7 @@ export function SponsorForm({
             <Input
               id="billing_contact_name"
               name="billing_contact_name"
-              defaultValue={defaults.billing_contact_name}
+              defaultValue={val("billing_contact_name")}
             />
           </div>
           <div className="space-y-2">
@@ -229,7 +276,7 @@ export function SponsorForm({
               id="billing_contact_email"
               name="billing_contact_email"
               type="email"
-              defaultValue={defaults.billing_contact_email}
+              defaultValue={val("billing_contact_email")}
             />
             <FieldError errors={fe.billing_contact_email} />
           </div>
@@ -248,7 +295,7 @@ export function SponsorForm({
               id="contract_start_date"
               name="contract_start_date"
               type="date"
-              defaultValue={defaults.contract_start_date}
+              defaultValue={val("contract_start_date")}
             />
           </div>
           <div className="space-y-2">
@@ -257,7 +304,7 @@ export function SponsorForm({
               id="contract_end_date"
               name="contract_end_date"
               type="date"
-              defaultValue={defaults.contract_end_date}
+              defaultValue={val("contract_end_date")}
             />
             <FieldError errors={fe.contract_end_date} />
           </div>
@@ -270,7 +317,7 @@ export function SponsorForm({
               min="0"
               step="0.01"
               placeholder="0.00"
-              defaultValue={defaults.monthly_price}
+              defaultValue={val("monthly_price")}
             />
             <FieldError errors={fe.monthly_price} />
           </div>
@@ -317,6 +364,20 @@ export function SponsorForm({
               </label>
             )}
           </div>
+          <label className="flex items-start gap-2 text-sm sm:col-span-2">
+            <input
+              type="checkbox"
+              name="mark_paid"
+              className="mt-0.5 size-4 rounded border-input"
+            />
+            <span>
+              Mark the first payment period as already paid
+              <span className="block text-xs text-muted-foreground">
+                Use this for a deal that was paid before you entered it (e.g. a
+                one-time deal). You can manage every period later under Payments.
+              </span>
+            </span>
+          </label>
         </CardContent>
       </Card>
 
@@ -359,7 +420,7 @@ export function SponsorForm({
               min="0"
               step="0.01"
               placeholder="Leave blank to use package price"
-              defaultValue={defaults.custom_monthly_price}
+              defaultValue={val("custom_monthly_price")}
             />
             <FieldError errors={fe.custom_monthly_price} />
           </div>
@@ -417,7 +478,7 @@ export function SponsorForm({
             name="notes"
             rows={4}
             placeholder="Internal notes about this sponsor…"
-            defaultValue={defaults.notes}
+            defaultValue={val("notes")}
           />
         </CardContent>
       </Card>

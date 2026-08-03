@@ -6,7 +6,7 @@ import { z } from "zod";
 
 import { createClient } from "@/lib/supabase/server";
 import { getSessionContext } from "@/lib/data/session";
-import { computePlan } from "@/lib/data/generation";
+import { runGenerationForMonth } from "@/lib/data/generation";
 import { deliverableTypeLabel } from "@/lib/labels";
 import { toServiceMonth, addMonths } from "@/lib/domain/dates";
 
@@ -17,35 +17,8 @@ import { toServiceMonth, addMonths } from "@/lib/domain/dates";
 export async function runGeneration(serviceMonth: string) {
   const session = await getSessionContext();
   if (!session?.organization) redirect("/login");
-  const orgId = session.organization.id;
 
-  const { plan } = await computePlan(serviceMonth);
-  const supabase = await createClient();
-
-  if (plan.toCreate.length > 0) {
-    const rows = plan.toCreate.map((d) => ({
-      organization_id: orgId,
-      sponsor_id: d.sponsorId,
-      sponsor_subscription_id: d.subscriptionId,
-      deliverable_type: d.deliverable_type,
-      title: `${deliverableTypeLabel(d.deliverable_type)} ${d.sequence} of ${d.quantity_total}`,
-      service_month: d.service_month,
-      original_service_month: d.original_service_month,
-      sequence: d.sequence,
-      quantity_total: d.quantity_total,
-      status: "not_scheduled" as const,
-      asset_status: "missing" as const,
-    }));
-    await supabase.from("deliverables").insert(rows);
-  }
-
-  await supabase.from("generation_runs").insert({
-    organization_id: orgId,
-    service_month: serviceMonth,
-    run_by: session.userId,
-    created_count: plan.toCreate.length,
-    skipped_count: plan.skipped,
-  });
+  await runGenerationForMonth(serviceMonth, session.organization.id, session.userId);
 
   revalidatePath("/deliverables");
   redirect(`/deliverables?month=${serviceMonth.slice(0, 7)}`);

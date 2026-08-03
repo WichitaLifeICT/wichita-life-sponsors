@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import type { DeliverableType, Recurrence } from "@/types/database";
+import { deliverableTypeLabel } from "@/lib/labels";
 import { resolveEffectiveDeliverables } from "@/lib/domain/deliverable-rules";
 import {
   planGeneration,
@@ -186,4 +187,52 @@ export async function computePlan(serviceMonth: string) {
   const ctx = await loadContext(serviceMonth);
   const plan = planGeneration(serviceMonth, ctx.subs, ctx.existing);
   return { plan, ctx };
+}
+
+/**
+ * Insert the missing deliverables for a service month and record a run.
+ * Idempotent (only creates what the plan says is missing). Pass `sponsorId` to
+ * restrict inserts to a single sponsor (used when a sponsor is saved, so its
+ * deliverables appear automatically). Returns the number created.
+ *
+ * NOTE: no revalidate/redirect — callers own cache invalidation.
+ */
+export async function runGenerationForMonth(
+  serviceMonth: string,
+  orgId: string,
+  userId: string | null,
+  sponsorId?: string,
+): Promise<number> {
+  const { plan } = await computePlan(serviceMonth);
+  const toCreate = sponsorId
+    ? plan.toCreate.filter((d) => d.sponsorId === sponsorId)
+    : plan.toCreate;
+
+  const supabase = await createClient();
+  if (toCreate.length > 0) {
+    const rows = toCreate.map((d) => ({
+      organization_id: orgId,
+      sponsor_id: d.sponsorId,
+      sponsor_subscription_id: d.subscriptionId,
+      deliverable_type: d.deliverable_type,
+      title: `${deliverableTypeLabel(d.deliverable_type)} ${d.sequence} of ${d.quantity_total}`,
+      service_month: d.service_month,
+      original_service_month: d.original_service_month,
+      sequence: d.sequence,
+      quantity_total: d.quantity_total,
+      status: "not_scheduled" as const,
+      asset_status: "missing" as const,
+    }));
+    await supabase.from("deliverables").insert(rows);
+  }
+
+  await supabase.from("generation_runs").insert({
+    organization_id: orgId,
+    service_month: serviceMonth,
+    run_by: userId,
+    created_count: toCreate.length,
+    skipped_count: plan.skipped,
+  });
+
+  return toCreate.length;
 }

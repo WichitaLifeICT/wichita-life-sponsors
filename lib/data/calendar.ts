@@ -176,6 +176,49 @@ export async function getUnscheduledDeliverables(
   }));
 }
 
+/**
+ * Deliverables owed in an EARLIER month that are still unscheduled and open —
+ * e.g. annual or quarterly items generated in their start month that you want to
+ * place on a later month's calendar. Excludes archived sponsors. This keeps
+ * annual social posts assignable all year, not just in their service month.
+ */
+export async function getCarryInUnscheduled(
+  month: string,
+): Promise<UnscheduledDeliverable[]> {
+  const supabase = await createClient();
+  const { data: deliverables } = await supabase
+    .from("deliverables")
+    .select("id, deliverable_type, sponsor_id, service_month, due_date, status")
+    .lt("service_month", `${month}-01`)
+    .is("scheduled_date", null)
+    .order("service_month", { ascending: true });
+
+  const rows = (deliverables ?? []).filter(
+    (d) => !CLOSED.has(d.status as string),
+  );
+  if (rows.length === 0) return [];
+
+  const { data: sponsors } = await supabase
+    .from("sponsors")
+    .select("id, company_name, status");
+  const activeName = new Map(
+    (sponsors ?? [])
+      .filter((s) => s.status !== "archived")
+      .map((s) => [s.id as string, s.company_name as string]),
+  );
+
+  return rows
+    .filter((d) => activeName.has(d.sponsor_id as string))
+    .map((d) => ({
+      id: d.id as string,
+      deliverable_type: d.deliverable_type as DeliverableType,
+      sponsorId: d.sponsor_id as string,
+      sponsorName: activeName.get(d.sponsor_id as string) ?? "Unknown",
+      service_month: d.service_month as string,
+      due_date: (d.due_date as string | null) ?? null,
+    }));
+}
+
 export interface SponsorScheduling {
   sponsorId: string;
   sponsorName: string;

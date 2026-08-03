@@ -24,9 +24,27 @@ export interface EnrichedSponsor extends Sponsor {
   monthlyValue: number;
   paymentStatus: SponsorPaymentStatus;
   remainingThisMonth: number;
+  remainingEmailThisMonth: number;
+  remainingSocialThisMonth: number;
   nextScheduledDate: string | null;
   daysUntilExpiry: number | null;
 }
+
+/** Email ad-slot deliverable types (vs. social posts). */
+const EMAIL_DELIVERABLE_TYPES = new Set([
+  "newsletter_headline",
+  "newsletter_feature",
+  "newsletter_lower",
+  "event_banner",
+  "newsletter_placement",
+  "dedicated_email",
+  "deep_dive_sponsored",
+]);
+const SOCIAL_DELIVERABLE_TYPES = new Set([
+  "social_post",
+  "social_story",
+  "social_reel",
+]);
 
 export interface SponsorsSummary {
   total: number;
@@ -97,7 +115,7 @@ export async function getSponsorListData(
       .eq("status", "active"),
     supabase
       .from("deliverables")
-      .select("sponsor_id, status")
+      .select("sponsor_id, status, deliverable_type")
       .eq("service_month", serviceMonth),
     supabase
       .from("deliverables")
@@ -127,12 +145,20 @@ export async function getSponsorListData(
     }
   }
 
-  // Remaining deliverables this month, per sponsor.
-  const remainingBySponsor = new Map<string, number>();
+  // Remaining deliverables this month, per sponsor — split email vs social.
+  const remainingBySponsor = new Map<
+    string,
+    { total: number; email: number; social: number }
+  >();
   for (const d of monthDeliverables ?? []) {
     if (INACTIVE_DELIVERABLE_STATUSES.has(d.status as string)) continue;
     const key = d.sponsor_id as string;
-    remainingBySponsor.set(key, (remainingBySponsor.get(key) ?? 0) + 1);
+    const cur = remainingBySponsor.get(key) ?? { total: 0, email: 0, social: 0 };
+    cur.total += 1;
+    const type = d.deliverable_type as string;
+    if (EMAIL_DELIVERABLE_TYPES.has(type)) cur.email += 1;
+    else if (SOCIAL_DELIVERABLE_TYPES.has(type)) cur.social += 1;
+    remainingBySponsor.set(key, cur);
   }
 
   // Next upcoming scheduled placement, per sponsor.
@@ -187,7 +213,9 @@ export async function getSponsorListData(
       packageName: pkg?.name ?? null,
       monthlyValue,
       paymentStatus,
-      remainingThisMonth: remainingBySponsor.get(sponsor.id) ?? 0,
+      remainingThisMonth: remainingBySponsor.get(sponsor.id)?.total ?? 0,
+      remainingEmailThisMonth: remainingBySponsor.get(sponsor.id)?.email ?? 0,
+      remainingSocialThisMonth: remainingBySponsor.get(sponsor.id)?.social ?? 0,
       nextScheduledDate: nextBySponsor.get(sponsor.id) ?? null,
       daysUntilExpiry: daysUntil(sponsor.contract_end_date, now),
     };

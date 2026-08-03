@@ -76,6 +76,32 @@ export async function updateDeliverableStatus(
   revalidatePath(`/deliverables/${id}`);
 }
 
+/** Permanently delete a deliverable (and its slot assignment / history rows). */
+export async function deleteDeliverable(id: string, returnTo?: string) {
+  const session = await getSessionContext();
+  if (!session?.organization) redirect("/login");
+
+  const supabase = await createClient();
+  // Remove dependent rows first in case FKs aren't ON DELETE CASCADE.
+  await supabase
+    .from("deliverable_slot_assignments")
+    .delete()
+    .eq("deliverable_id", id);
+  await supabase
+    .from("deliverable_status_history")
+    .delete()
+    .eq("deliverable_id", id);
+  await supabase.from("deliverables").delete().eq("id", id);
+
+  revalidatePath("/deliverables");
+  revalidatePath("/calendar");
+  if (returnTo) {
+    revalidatePath(returnTo);
+    redirect(returnTo);
+  }
+  redirect("/deliverables");
+}
+
 export interface DeliverableFieldsState {
   error: string | null;
 }

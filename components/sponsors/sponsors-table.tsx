@@ -68,7 +68,33 @@ export function SponsorsTable({ rows }: { rows: EnrichedSponsor[] }) {
               </TableCell>
               <TableCell className="text-center tabular-nums">
                 {s.remainingThisMonth > 0 ? (
-                  <span className="font-medium">{s.remainingThisMonth}</span>
+                  <div className="text-xs leading-tight">
+                    <div>
+                      <span className="font-medium">
+                        {s.remainingEmailThisMonth}
+                      </span>{" "}
+                      email
+                    </div>
+                    <div>
+                      <span className="font-medium">
+                        {s.remainingSocialThisMonth}
+                      </span>{" "}
+                      social
+                    </div>
+                    {s.remainingThisMonth -
+                      s.remainingEmailThisMonth -
+                      s.remainingSocialThisMonth >
+                      0 && (
+                      <div className="text-muted-foreground">
+                        <span className="font-medium">
+                          {s.remainingThisMonth -
+                            s.remainingEmailThisMonth -
+                            s.remainingSocialThisMonth}
+                        </span>{" "}
+                        other
+                      </div>
+                    )}
+                  </div>
                 ) : (
                   <span className="text-muted-foreground">0</span>
                 )}

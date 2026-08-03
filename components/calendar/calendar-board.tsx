@@ -15,6 +15,7 @@ import type {
   SlotWithAssignments,
   SlotFill,
   SponsorScheduling,
+  UnscheduledDeliverable,
 } from "@/lib/data/calendar";
 import { SLOT_TYPE_OPTIONS } from "@/lib/labels";
 import { SlotForm } from "@/components/calendar/slot-form";
@@ -73,13 +74,18 @@ export function CalendarBoard({
   view,
   slots,
   scheduling,
+  carryIn = [],
 }: {
   month: string;
   view: "month" | "agenda";
   slots: SlotWithAssignments[];
   scheduling: SponsorScheduling[];
+  carryIn?: UnscheduledDeliverable[];
 }) {
   const unscheduled = scheduling.flatMap((g) => g.unscheduled);
+  // Everything assignable onto this month's calendar: this month's unscheduled
+  // items plus still-open items owed earlier (annual/quarterly carryover).
+  const assignable = [...unscheduled, ...carryIn];
   const [newSlotDate, setNewSlotDate] = useState<string | null>(null);
   const [manageId, setManageId] = useState<string | null>(null);
   const [editing, setEditing] = useState(false);
@@ -94,12 +100,12 @@ export function CalendarBoard({
   const manageSlot = slots.find((s) => s.id === manageId) ?? null;
   const matchType = manageSlot ? TIER_TYPE[manageSlot.title ?? ""] : undefined;
   const assignOptions = matchType
-    ? [...unscheduled].sort(
+    ? [...assignable].sort(
         (a, b) =>
           (b.deliverable_type === matchType ? 1 : 0) -
           (a.deliverable_type === matchType ? 1 : 0),
       )
-    : unscheduled;
+    : assignable;
 
   const slotsByDate = new Map<string, SlotWithAssignments[]>();
   for (const s of slots) {
@@ -226,6 +232,39 @@ export function CalendarBoard({
             )}
           </div>
         </div>
+        {carryIn.length > 0 && (
+          <div className="rounded-lg border bg-card">
+            <div className="border-b px-3 py-2 text-sm font-medium">
+              Still to place from earlier
+              <p className="text-xs font-normal text-muted-foreground">
+                Annual / quarterly items owed in a past month. Drag onto any
+                day’s slot, or open a slot and assign.
+              </p>
+            </div>
+            <div className="max-h-64 space-y-1 overflow-y-auto p-2">
+              {carryIn.map((d) => (
+                <div
+                  key={d.id}
+                  draggable
+                  onDragStart={() => setDraggingId(d.id)}
+                  onDragEnd={() => setDraggingId(null)}
+                  className="flex cursor-grab items-center justify-between gap-2 rounded-md border bg-background px-2 py-1.5 text-xs active:cursor-grabbing"
+                  title={`${d.sponsorName} · ${deliverableTypeLabel(d.deliverable_type)} — drag onto a slot`}
+                >
+                  <span className="truncate">
+                    <span className="font-medium">{d.sponsorName}</span>{" "}
+                    <span className="text-muted-foreground">
+                      · {deliverableTypeLabel(d.deliverable_type)}
+                    </span>
+                  </span>
+                  <span className="shrink-0 text-[10px] text-muted-foreground">
+                    {d.service_month.slice(0, 7)}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
         <p className="px-1 text-xs text-muted-foreground">
           Green = fully scheduled. Amber = still owes scheduling. Drag a
           sponsor chip onto another day’s slot to move it, use{" "}
@@ -350,9 +389,9 @@ export function CalendarBoard({
                     <p className="text-xs uppercase text-muted-foreground">
                       Assign a deliverable
                     </p>
-                    {unscheduled.length === 0 ? (
+                    {assignable.length === 0 ? (
                       <p className="text-sm text-muted-foreground">
-                        No unscheduled deliverables this month.
+                        No unscheduled deliverables to place.
                       </p>
                     ) : (
                       <div className="flex gap-2">
@@ -366,6 +405,9 @@ export function CalendarBoard({
                             <option key={d.id} value={d.id}>
                               {matchType && d.deliverable_type === matchType ? "★ " : ""}
                               {d.sponsorName} · {deliverableTypeLabel(d.deliverable_type)}
+                              {d.service_month.slice(0, 7) !== month
+                                ? ` (owed ${d.service_month.slice(0, 7)})`
+                                : ""}
                             </option>
                           ))}
                         </select>

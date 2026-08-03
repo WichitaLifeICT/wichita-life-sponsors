@@ -14,7 +14,7 @@ import {
 import { getSessionContext } from "@/lib/data/session";
 import { getDashboardData } from "@/lib/data/dashboard";
 import { getMonthlyRevenue } from "@/lib/data/billing";
-import { currentServiceMonth } from "@/lib/domain/dates";
+import { currentServiceMonth, addMonths } from "@/lib/domain/dates";
 import { REVENUE_START_MONTH } from "@/lib/config";
 import {
   formatCurrency,
@@ -88,18 +88,21 @@ export default async function DashboardPage({
   const fromMonth =
     REVENUE_START_MONTH > throughMonth ? throughMonth : REVENUE_START_MONTH;
 
-  const [session, d, revenueSeries] = await Promise.all([
+  // Previous / current / projected-next window (relative to the selected month).
+  const prevMonth = addMonths(`${month}-01`, -1).slice(0, 7);
+  const nextMonth = addMonths(`${month}-01`, 1).slice(0, 7);
+
+  const [session, d, revenueSeries, trend] = await Promise.all([
     getSessionContext(),
     getDashboardData(month),
     getMonthlyRevenue(fromMonth, throughMonth),
+    getMonthlyRevenue(prevMonth, nextMonth),
   ]);
-  const selectedRevenue =
-    revenueSeries.find((r) => r.month === month) ?? {
-      month,
-      billed: 0,
-      collected: 0,
-      outstanding: 0,
-    };
+  const trendByMonth = new Map(trend.map((r) => [r.month, r]));
+  const zeroRev = { billed: 0, collected: 0, outstanding: 0 };
+  const revPrev = trendByMonth.get(prevMonth) ?? { month: prevMonth, ...zeroRev };
+  const revCur = trendByMonth.get(month) ?? { month, ...zeroRev };
+  const revNext = trendByMonth.get(nextMonth) ?? { month: nextMonth, ...zeroRev };
   const firstName =
     session?.profile?.full_name?.split(" ")[0] ??
     session?.email?.split("@")[0] ??
@@ -207,26 +210,18 @@ export default async function DashboardPage({
         <FulfillmentSummary data={d.fulfillment} />
       </div>
 
-      {/* Revenue — selected month */}
+      {/* Revenue — previous · current · projected next */}
       <Card>
         <CardHeader className="pb-3">
-          <CardTitle className="text-base">
-            Revenue · {formatMonth(`${month}-01`)}
-          </CardTitle>
+          <CardTitle className="text-base">Revenue</CardTitle>
+          <p className="text-sm text-muted-foreground">
+            Previous month, current month, and projected next month.
+          </p>
         </CardHeader>
         <CardContent className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-          <Rev label="Billed this month" value={formatCurrency(selectedRevenue.billed)} />
-          <Rev
-            label="Collected this month"
-            value={formatCurrency(selectedRevenue.collected)}
-          />
-          <Rev
-            label={
-              selectedRevenue.outstanding > 0 ? "Not yet collected" : "Outstanding"
-            }
-            value={formatCurrency(selectedRevenue.outstanding)}
-            accent={selectedRevenue.outstanding > 0}
-          />
+          <RevCol title="Previous" month={prevMonth} r={revPrev} />
+          <RevCol title="Current" month={month} r={revCur} highlight />
+          <RevCol title="Projected next" month={nextMonth} r={revNext} projected />
         </CardContent>
       </Card>
 
@@ -292,23 +287,57 @@ function AttnRow({ show, href, label }: { show: boolean; href: string; label: st
   );
 }
 
-function Rev({
-  label,
-  value,
-  accent,
+function RevCol({
+  title,
+  month,
+  r,
+  highlight,
+  projected,
 }: {
-  label: string;
-  value: string;
-  accent?: boolean;
+  title: string;
+  month: string;
+  r: { billed: number; collected: number; outstanding: number };
+  highlight?: boolean;
+  projected?: boolean;
 }) {
   return (
-    <div className="rounded-lg border p-4">
-      <p className="text-xs text-muted-foreground">{label}</p>
-      <p
-        className={`text-xl font-semibold tabular-nums${accent ? " text-warning" : ""}`}
-      >
-        {value}
-      </p>
+    <div
+      className={`rounded-lg border p-4${highlight ? " border-primary/40 bg-primary/5" : ""}`}
+    >
+      <div className="flex items-baseline justify-between gap-2">
+        <p className="text-xs font-medium uppercase text-muted-foreground">
+          {title}
+        </p>
+        <p className="text-xs text-muted-foreground">
+          {formatMonth(`${month}-01`)}
+        </p>
+      </div>
+      <dl className="mt-2 space-y-1 text-sm">
+        <div className="flex justify-between gap-2">
+          <dt className="text-muted-foreground">
+            {projected ? "Projected billing" : "Billed"}
+          </dt>
+          <dd className="font-medium tabular-nums">{formatCurrency(r.billed)}</dd>
+        </div>
+        {!projected && (
+          <div className="flex justify-between gap-2">
+            <dt className="text-muted-foreground">Collected</dt>
+            <dd className="tabular-nums text-success">
+              {formatCurrency(r.collected)}
+            </dd>
+          </div>
+        )}
+        <div className="flex justify-between gap-2">
+          <dt className="text-muted-foreground">
+            {projected ? "Expected" : "Outstanding"}
+          </dt>
+          <dd
+            className={`tabular-nums${r.outstanding > 0 ? " text-warning" : " text-muted-foreground"}`}
+          >
+            {formatCurrency(r.outstanding)}
+          </dd>
+        </div>
+      </dl>
     </div>
   );
 }
