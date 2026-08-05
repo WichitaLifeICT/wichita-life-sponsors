@@ -9,7 +9,7 @@ import {
   sponsorPaymentStatus,
   type SponsorPaymentStatus,
 } from "@/lib/domain/billing";
-import { effectiveMonthlyValue } from "@/lib/domain/revenue";
+import { effectiveMonthlyValue, effectiveBillingBasis } from "@/lib/domain/revenue";
 import { currentServiceMonth, todayISO, daysUntil } from "@/lib/domain/dates";
 import { CONTRACT_EXPIRY_WARNING_DAYS } from "@/lib/config";
 
@@ -22,6 +22,8 @@ const INACTIVE_DELIVERABLE_STATUSES = new Set([
 export interface EnrichedSponsor extends Sponsor {
   packageName: string | null;
   monthlyValue: number;
+  /** Full value of a one-time / non-recurring deal (0 for recurring deals). */
+  oneTimeValue: number;
   paymentStatus: SponsorPaymentStatus;
   remainingThisMonth: number;
   remainingEmailThisMonth: number;
@@ -193,13 +195,22 @@ export async function getSponsorListData(
     const sub = subBySponsor.get(sponsor.id);
     const pkg = sub?.package_id ? pkgMap.get(sub.package_id) : undefined;
 
-    const monthlyValue = effectiveMonthlyValue({
+    const priceInputs = {
       sponsorMonthlyPrice: sponsor.monthly_price,
       sponsorBillingFrequency: sponsor.billing_frequency,
       subscriptionCustomMonthlyPrice: sub?.custom_monthly_price,
       packageBasePrice: pkg?.base_price,
       packageBillingFrequency: pkg?.billing_frequency ?? null,
-    });
+    };
+    const monthlyValue = effectiveMonthlyValue(priceInputs);
+    // Effective billing frequency: a custom monthly override is recurring;
+    // otherwise the package's frequency (if any), else the sponsor's.
+    const effectiveFrequency =
+      sub?.custom_monthly_price && sub.custom_monthly_price > 0
+        ? "monthly"
+        : (pkg?.billing_frequency ?? sponsor.billing_frequency);
+    const oneTimeValue =
+      effectiveFrequency === "one_time" ? effectiveBillingBasis(priceInputs) : 0;
 
     const sponsorInvoices = invoicesBySponsor.get(sponsor.id) ?? [];
     const paymentStatus = sponsorPaymentStatus(
@@ -212,6 +223,7 @@ export async function getSponsorListData(
       ...sponsor,
       packageName: pkg?.name ?? null,
       monthlyValue,
+      oneTimeValue,
       paymentStatus,
       remainingThisMonth: remainingBySponsor.get(sponsor.id)?.total ?? 0,
       remainingEmailThisMonth: remainingBySponsor.get(sponsor.id)?.email ?? 0,

@@ -23,6 +23,7 @@ export function SponsorsTable({ rows }: { rows: EnrichedSponsor[] }) {
             <TableHead>Status</TableHead>
             <TableHead>Package</TableHead>
             <TableHead className="text-right">Monthly value</TableHead>
+            <TableHead className="text-right">One-time value</TableHead>
             <TableHead>Contract</TableHead>
             <TableHead>Payment</TableHead>
             <TableHead className="text-center">Owed this mo.</TableHead>
@@ -52,6 +53,9 @@ export function SponsorsTable({ rows }: { rows: EnrichedSponsor[] }) {
               </TableCell>
               <TableCell className="text-right tabular-nums">
                 {s.monthlyValue > 0 ? formatCurrency(s.monthlyValue) : "—"}
+              </TableCell>
+              <TableCell className="text-right tabular-nums">
+                {s.oneTimeValue > 0 ? formatCurrency(s.oneTimeValue) : "—"}
               </TableCell>
               <TableCell className="whitespace-nowrap text-muted-foreground">
                 {s.contract_start_date || s.contract_end_date ? (
