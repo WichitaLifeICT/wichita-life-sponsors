@@ -715,3 +715,12 @@ alter type deliverable_type add value if not exists 'deep_dive_sponsored';
 -- =============================================================================
 
 alter table sponsors add column if not exists analytics_url text;
+
+
+-- =============================================================================
+-- >>> 20260101000011_deal_type.sql <<<
+-- Deal compensation: cash / trade / both, plus free-text details.
+-- =============================================================================
+
+alter table sponsors add column if not exists deal_type text;
+alter table sponsors add column if not exists deal_notes text;

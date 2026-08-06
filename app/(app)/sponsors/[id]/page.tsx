@@ -302,6 +302,16 @@ export default async function SponsorDetailPage({
                       }`
                     : "—"}
                 </Fact>
+                <Fact label="Deal type">
+                  {sponsor.deal_type ? humanize(sponsor.deal_type) : "—"}
+                </Fact>
+                {sponsor.deal_notes && (
+                  <Fact label="Deal details">
+                    <span className="whitespace-pre-wrap font-normal">
+                      {sponsor.deal_notes}
+                    </span>
+                  </Fact>
+                )}
                 <Fact label="Contract start">
                   {formatDate(sponsor.contract_start_date)}
                 </Fact>

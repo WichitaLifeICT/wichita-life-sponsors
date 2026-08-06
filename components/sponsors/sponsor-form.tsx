@@ -47,6 +47,8 @@ export interface SponsorFormDefaults {
   billing_frequency?: string;
   payment_method?: string;
   stripe_subscription?: boolean;
+  deal_type?: string;
+  deal_notes?: string;
   package_id?: string;
   custom_monthly_price?: string;
   auto_generate_deliverables?: boolean;
@@ -79,6 +81,13 @@ const PAYMENT_METHOD = [
   ["other", "Other"],
 ] as const;
 
+const DEAL_TYPE = [
+  ["", "Not set"],
+  ["cash", "Cash"],
+  ["trade", "Trade"],
+  ["both", "Both"],
+] as const;
+
 const FIELD_LABELS: Record<string, string> = {
   company_name: "Company name",
   status: "Status",
@@ -95,6 +104,8 @@ const FIELD_LABELS: Record<string, string> = {
   monthly_price: "Price",
   billing_frequency: "Billing frequency",
   payment_method: "Payment method",
+  deal_type: "Deal type",
+  deal_notes: "Deal details",
   custom_monthly_price: "Custom monthly price",
   new_package_name: "New package name",
   rules: "Deliverables",
@@ -141,6 +152,9 @@ export function SponsorForm({
   );
   const [paymentMethod, setPaymentMethod] = useState(
     submitted.payment_method ?? defaults.payment_method ?? "",
+  );
+  const [dealType, setDealType] = useState(
+    submitted.deal_type ?? defaults.deal_type ?? "",
   );
   const [packageId, setPackageId] = useState(
     submitted.package_id ?? defaults.package_id ?? "none",
@@ -364,6 +378,37 @@ export function SponsorForm({
               </label>
             )}
           </div>
+          <div className="space-y-2">
+            <Label htmlFor="deal_type">Deal type</Label>
+            <Select value={dealType} onValueChange={setDealType}>
+              <SelectTrigger id="deal_type">
+                <SelectValue placeholder="Not set" />
+              </SelectTrigger>
+              <SelectContent>
+                {DEAL_TYPE.filter(([v]) => v !== "").map(([v, l]) => (
+                  <SelectItem key={v} value={v}>
+                    {l}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <input type="hidden" name="deal_type" value={dealType} />
+            <p className="text-xs text-muted-foreground">
+              Cash, trade (barter), or both.
+            </p>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="deal_notes">Deal details</Label>
+            <Textarea
+              id="deal_notes"
+              name="deal_notes"
+              rows={2}
+              placeholder="e.g. $500 cash + trade for 2 event tickets"
+              defaultValue={val("deal_notes")}
+            />
+            <FieldError errors={fe.deal_notes} />
+          </div>
+
           <label className="flex items-start gap-2 text-sm sm:col-span-2">
             <input
               type="checkbox"

@@ -97,6 +97,17 @@ export const sponsorSchema = z
       .optional()
       .or(z.literal("").transform(() => undefined)),
     stripe_subscription: z.coerce.boolean().default(false),
+    // How the deal is compensated.
+    deal_type: z
+      .enum(["cash", "trade", "both"])
+      .optional()
+      .or(z.literal("").transform(() => undefined)),
+    deal_notes: z
+      .string()
+      .trim()
+      .max(2000)
+      .optional()
+      .transform((v) => (v ? v : undefined)),
     // One-shot: mark the sponsor's first billing period as already paid
     // (e.g. a one-time deal that was paid before it was entered here).
     mark_paid: z.coerce.boolean().default(false),

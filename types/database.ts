@@ -83,6 +83,8 @@ export interface Sponsor {
   billing_frequency: BillingFrequency;
   payment_method: PaymentMethod | null;
   stripe_subscription: boolean;
+  deal_type: string | null;
+  deal_notes: string | null;
   logo_url: string | null;
   is_demo: boolean;
   created_at: string;

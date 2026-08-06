@@ -69,6 +69,8 @@ function sponsorRow(orgId: string, v: SponsorParsed) {
     billing_frequency: v.billing_frequency,
     payment_method: v.payment_method ?? null,
     stripe_subscription: v.stripe_subscription,
+    deal_type: v.deal_type ?? null,
+    deal_notes: v.deal_notes ?? null,
   };
 }
 
