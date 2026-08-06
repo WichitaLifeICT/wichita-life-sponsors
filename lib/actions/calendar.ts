@@ -6,6 +6,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getSessionContext } from "@/lib/data/session";
 import { slotSchema } from "@/lib/validations/slot";
+import { slotTypeForDeliverable, EMAIL_TIER_DELIVERABLE_TYPE } from "@/lib/labels";
 
 export interface SlotActionState {
   error: string | null;
@@ -25,7 +26,8 @@ export async function createSlot(
   const supabase = await createClient();
   const { error } = await supabase.from("content_slots").insert({
     organization_id: session.organization.id,
-    slot_type: parsed.data.slot_type,
+    slot_type: slotTypeForDeliverable(parsed.data.deliverable_type),
+    deliverable_type: parsed.data.deliverable_type,
     title: parsed.data.title ?? null,
     scheduled_date: parsed.data.scheduled_date,
     capacity: parsed.data.capacity,
@@ -50,7 +52,8 @@ export async function updateSlot(
   const { error } = await supabase
     .from("content_slots")
     .update({
-      slot_type: parsed.data.slot_type,
+      slot_type: slotTypeForDeliverable(parsed.data.deliverable_type),
+      deliverable_type: parsed.data.deliverable_type,
       title: parsed.data.title ?? null,
       scheduled_date: parsed.data.scheduled_date,
       capacity: parsed.data.capacity,
@@ -104,6 +107,7 @@ export async function generateEmailSlots(month: string, formData: FormData) {
   const toInsert: {
     organization_id: string;
     slot_type: "newsletter";
+    deliverable_type: string | null;
     title: string;
     scheduled_date: string;
     capacity: number;
@@ -120,6 +124,7 @@ export async function generateEmailSlots(month: string, formData: FormData) {
       toInsert.push({
         organization_id: session.organization.id,
         slot_type: "newsletter",
+        deliverable_type: EMAIL_TIER_DELIVERABLE_TYPE[tier] ?? null,
         title: tier,
         scheduled_date: date,
         capacity: 1,

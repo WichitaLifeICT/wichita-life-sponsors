@@ -1,20 +1,9 @@
 import { z } from "zod";
 
-const SLOT_TYPE = [
-  "newsletter",
-  "dedicated_email",
-  "instagram_post",
-  "instagram_story",
-  "instagram_reel",
-  "facebook_post",
-  "podcast",
-  "website",
-  "event",
-  "custom",
-] as const;
-
 export const slotSchema = z.object({
-  slot_type: z.enum(SLOT_TYPE),
+  // Slots use the deliverable-type vocabulary so they line up with the
+  // deliverables they hold; slot_type is derived from this server-side.
+  deliverable_type: z.string().min(1, "Choose a type."),
   title: z
     .string()
     .trim()

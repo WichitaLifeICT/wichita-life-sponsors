@@ -4,7 +4,7 @@ import { useActionState } from "react";
 import { Loader2 } from "lucide-react";
 
 import type { SlotActionState } from "@/lib/actions/calendar";
-import { SLOT_TYPE_OPTIONS } from "@/lib/labels";
+import { DELIVERABLE_TYPE_OPTIONS } from "@/lib/labels";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -19,7 +19,7 @@ type Action = (
 ) => Promise<SlotActionState>;
 
 export interface SlotFormDefaults {
-  slot_type?: string;
+  deliverable_type?: string;
   title?: string;
   scheduled_date?: string;
   capacity?: number;
@@ -52,14 +52,14 @@ export function SlotForm({
 
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="space-y-2">
-          <Label htmlFor="slot_type">Type</Label>
+          <Label htmlFor="deliverable_type">Type</Label>
           <select
-            id="slot_type"
-            name="slot_type"
-            defaultValue={defaults.slot_type ?? "newsletter"}
+            id="deliverable_type"
+            name="deliverable_type"
+            defaultValue={defaults.deliverable_type ?? "newsletter_headline"}
             className={selectClass}
           >
-            {SLOT_TYPE_OPTIONS.map(([v, l]) => (
+            {DELIVERABLE_TYPE_OPTIONS.map(([v, l]) => (
               <option key={v} value={v}>
                 {l}
               </option>

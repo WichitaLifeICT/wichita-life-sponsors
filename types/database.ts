@@ -193,6 +193,7 @@ export interface ContentSlot {
   id: string;
   organization_id: string;
   slot_type: SlotType;
+  deliverable_type: DeliverableType | null;
   title: string | null;
   scheduled_date: string;
   capacity: number;

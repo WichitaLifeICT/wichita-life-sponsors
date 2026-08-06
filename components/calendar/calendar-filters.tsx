@@ -12,7 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { SLOT_TYPE_OPTIONS } from "@/lib/labels";
+import { DELIVERABLE_TYPE_OPTIONS } from "@/lib/labels";
 
 export function CalendarFilters({ view }: { view: "month" | "agenda" }) {
   const router = useRouter();
@@ -38,7 +38,7 @@ export function CalendarFilters({ view }: { view: "month" | "agenda" }) {
         </SelectTrigger>
         <SelectContent>
           <SelectItem value="all">All slot types</SelectItem>
-          {SLOT_TYPE_OPTIONS.map(([v, l]) => (
+          {DELIVERABLE_TYPE_OPTIONS.map(([v, l]) => (
             <SelectItem key={v} value={v}>
               {l}
             </SelectItem>

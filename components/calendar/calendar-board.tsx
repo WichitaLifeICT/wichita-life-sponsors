@@ -98,7 +98,9 @@ export function CalendarBoard({
   } | null>(null);
 
   const manageSlot = slots.find((s) => s.id === manageId) ?? null;
-  const matchType = manageSlot ? TIER_TYPE[manageSlot.title ?? ""] : undefined;
+  const matchType = manageSlot
+    ? (manageSlot.deliverable_type ?? TIER_TYPE[manageSlot.title ?? ""])
+    : undefined;
   const assignOptions = matchType
     ? [...assignable].sort(
         (a, b) =>
@@ -140,7 +142,10 @@ export function CalendarBoard({
   }
 
   const chipLabel = (s: SlotWithAssignments) =>
-    s.title || SLOT_LABEL.get(s.slot_type) || s.slot_type;
+    s.title ||
+    (s.deliverable_type ? deliverableTypeLabel(s.deliverable_type) : null) ||
+    SLOT_LABEL.get(s.slot_type) ||
+    s.slot_type;
 
   return (
     <div className="grid gap-4 lg:grid-cols-[1fr_18rem]">
@@ -323,7 +328,9 @@ export function CalendarBoard({
                 </DialogTitle>
                 <p className="text-sm text-muted-foreground">
                   {formatDate(manageSlot.scheduled_date)} ·{" "}
-                  {SLOT_LABEL.get(manageSlot.slot_type)}
+                  {manageSlot.deliverable_type
+                    ? deliverableTypeLabel(manageSlot.deliverable_type)
+                    : SLOT_LABEL.get(manageSlot.slot_type)}
                 </p>
               </DialogHeader>
 
@@ -331,7 +338,10 @@ export function CalendarBoard({
                 <SlotForm
                   action={updateSlot.bind(null, manageSlot.id)}
                   defaults={{
-                    slot_type: manageSlot.slot_type,
+                    deliverable_type:
+                      manageSlot.deliverable_type ??
+                      TIER_TYPE[manageSlot.title ?? ""] ??
+                      undefined,
                     title: manageSlot.title ?? undefined,
                     scheduled_date: manageSlot.scheduled_date,
                     capacity: manageSlot.capacity,

@@ -60,7 +60,7 @@ export async function getSlotsInRange(
     .gte("scheduled_date", start)
     .lte("scheduled_date", end)
     .order("scheduled_date", { ascending: true });
-  if (filters.type) q = q.eq("slot_type", filters.type);
+  if (filters.type) q = q.eq("deliverable_type", filters.type);
 
   const { data: slots } = await q;
   const slotRows = (slots ?? []) as ContentSlot[];

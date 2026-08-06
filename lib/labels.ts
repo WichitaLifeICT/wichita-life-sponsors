@@ -56,6 +56,41 @@ const LEGACY_LABELS: Record<string, string> = {
   newsletter_placement: "Email — Headline",
 };
 
+/**
+ * Map a deliverable_type to the legacy content-slot `slot_type` used for
+ * grouping (newsletter vs social). Slots now carry a deliverable_type directly;
+ * this keeps slot_type populated so the newsletter/social filters still work.
+ */
+export const DELIVERABLE_TO_SLOT_TYPE: Record<string, SlotType> = {
+  newsletter_headline: "newsletter",
+  newsletter_feature: "newsletter",
+  newsletter_lower: "newsletter",
+  event_banner: "newsletter",
+  newsletter_placement: "newsletter",
+  deep_dive_sponsored: "newsletter",
+  dedicated_email: "dedicated_email",
+  social_post: "instagram_post",
+  social_story: "instagram_story",
+  social_reel: "instagram_reel",
+  website_banner: "website",
+  podcast_mention: "podcast",
+  event_sponsorship: "event",
+  custom: "custom",
+};
+
+export function slotTypeForDeliverable(type: string): SlotType {
+  return DELIVERABLE_TO_SLOT_TYPE[type] ?? "custom";
+}
+
+/** Email ad tiers (calendar auto-schedule) → their deliverable_type. */
+export const EMAIL_TIER_DELIVERABLE_TYPE: Record<string, string> = {
+  Headline: "newsletter_headline",
+  Feature: "newsletter_feature",
+  Lower: "newsletter_lower",
+  "Event banner": "event_banner",
+  "Deep Dive": "deep_dive_sponsored",
+};
+
 const DELIVERABLE_TYPE_LABELS: Record<string, string> = {
   ...Object.fromEntries(DELIVERABLE_TYPE_OPTIONS),
   ...LEGACY_LABELS,
