@@ -216,6 +216,18 @@ export async function bulkUpdateDeliverables(formData: FormData) {
       .from("deliverables")
       .update({ due_date: value || null })
       .in("id", ids);
+  } else if (action === "delete") {
+    // Remove dependent rows first in case FKs aren't ON DELETE CASCADE.
+    await supabase
+      .from("deliverable_slot_assignments")
+      .delete()
+      .in("deliverable_id", ids);
+    await supabase
+      .from("deliverable_status_history")
+      .delete()
+      .in("deliverable_id", ids);
+    await supabase.from("deliverables").delete().in("id", ids);
+    revalidatePath("/calendar");
   } else if (action === "carry_forward") {
     const { data: rows } = await supabase
       .from("deliverables")

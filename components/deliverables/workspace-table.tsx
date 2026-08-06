@@ -15,6 +15,17 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
+  AlertDialog,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { DeleteDeliverableButton } from "@/components/deliverables/delete-deliverable-button";
+import {
   DeliverableStatusBadge,
   AssetStatusBadge,
 } from "@/components/deliverables/status-badge";
@@ -103,6 +114,42 @@ export function WorkspaceTable({
               Set due
             </Button>
           </form>
+
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                className="text-destructive"
+              >
+                Delete
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>
+                  Delete {selected.size} deliverable
+                  {selected.size === 1 ? "" : "s"}?
+                </AlertDialogTitle>
+                <AlertDialogDescription>
+                  They’ll be permanently removed, including any calendar
+                  assignment. This can’t be undone.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <form action={bulkUpdateDeliverables}>
+                  <input type="hidden" name="ids" value={idsJson} />
+                  <input type="hidden" name="month" value={month} />
+                  <input type="hidden" name="action" value="delete" />
+                  <Button type="submit" variant="destructive">
+                    Delete
+                  </Button>
+                </form>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         </div>
       )}
 
@@ -170,12 +217,19 @@ export function WorkspaceTable({
                     {d.assignedSlotLabel ?? "—"}
                   </TableCell>
                   <TableCell className="text-right">
-                    <Link
-                      href={`/deliverables/${d.id}`}
-                      className="text-sm text-primary hover:underline"
-                    >
-                      Open
-                    </Link>
+                    <div className="flex items-center justify-end gap-1">
+                      <Link
+                        href={`/deliverables/${d.id}`}
+                        className="text-sm text-primary hover:underline"
+                      >
+                        Open
+                      </Link>
+                      <DeleteDeliverableButton
+                        id={d.id}
+                        label={`${d.sponsorName} · ${deliverableTypeLabel(d.deliverable_type)}`}
+                        returnTo={`/deliverables?month=${month}`}
+                      />
+                    </div>
                   </TableCell>
                 </TableRow>
               );

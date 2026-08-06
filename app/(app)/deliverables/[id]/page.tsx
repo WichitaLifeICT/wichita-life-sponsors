@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DeliverableStatusBadge } from "@/components/deliverables/status-badge";
 import { DeliverableDetailForm } from "@/components/deliverables/deliverable-detail-form";
+import { DeleteDeliverableButton } from "@/components/deliverables/delete-deliverable-button";
 import { deliverableTypeLabel } from "@/lib/labels";
 import { formatDate, formatMonth, humanize } from "@/lib/format";
 
@@ -45,7 +46,16 @@ export default async function DeliverableDetailPage({
               {d.title ? ` · ${d.title}` : ""}
             </>
           }
-          actions={<DeliverableStatusBadge status={d.status} />}
+          actions={
+            <div className="flex items-center gap-2">
+              <DeliverableStatusBadge status={d.status} />
+              <DeleteDeliverableButton
+                id={d.id}
+                label={deliverableTypeLabel(d.deliverable_type)}
+                returnTo="/deliverables"
+              />
+            </div>
+          }
         />
       </div>
 
