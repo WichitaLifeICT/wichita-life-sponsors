@@ -91,6 +91,34 @@ export const EMAIL_TIER_DELIVERABLE_TYPE: Record<string, string> = {
   "Deep Dive": "deep_dive_sponsored",
 };
 
+/**
+ * Email ad tiers form a hierarchy: a higher slot can fulfill a lower-tier
+ * deliverable (Headline > Feature > Lower). event_banner / deep_dive are
+ * standalone and only match themselves exactly.
+ */
+export const EMAIL_TIER_RANK: Record<string, number> = {
+  newsletter_headline: 3,
+  newsletter_feature: 2,
+  newsletter_lower: 1,
+};
+
+/**
+ * Can a slot of `slotType` fulfill a deliverable of `deliverableType`? True for
+ * an exact match, or when both are email tiers and the slot's tier is at least
+ * the deliverable's (e.g. a Headline slot fulfills a Feature or Lower).
+ */
+export function slotFulfillsDeliverable(
+  slotType: string | null | undefined,
+  deliverableType: string | null | undefined,
+): boolean {
+  if (!slotType || !deliverableType) return false;
+  if (slotType === deliverableType) return true;
+  const slotRank = EMAIL_TIER_RANK[slotType];
+  const delRank = EMAIL_TIER_RANK[deliverableType];
+  if (slotRank != null && delRank != null) return slotRank >= delRank;
+  return false;
+}
+
 const DELIVERABLE_TYPE_LABELS: Record<string, string> = {
   ...Object.fromEntries(DELIVERABLE_TYPE_OPTIONS),
   ...LEGACY_LABELS,

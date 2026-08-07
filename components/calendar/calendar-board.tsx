@@ -17,7 +17,11 @@ import type {
   SponsorScheduling,
   UnscheduledDeliverable,
 } from "@/lib/data/calendar";
-import { SLOT_TYPE_OPTIONS } from "@/lib/labels";
+import {
+  SLOT_TYPE_OPTIONS,
+  slotFulfillsDeliverable,
+  EMAIL_TIER_RANK,
+} from "@/lib/labels";
 import { SlotForm } from "@/components/calendar/slot-form";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -101,11 +105,14 @@ export function CalendarBoard({
   const matchType = manageSlot
     ? (manageSlot.deliverable_type ?? TIER_TYPE[manageSlot.title ?? ""])
     : undefined;
+  // A deliverable "fits" this slot if the slot's type can fulfill it — an exact
+  // match, or a higher email tier (a Headline slot fits Feature / Lower).
+  const fits = (deliverableType: string) =>
+    !!matchType && slotFulfillsDeliverable(matchType, deliverableType);
   const assignOptions = matchType
     ? [...assignable].sort(
         (a, b) =>
-          (b.deliverable_type === matchType ? 1 : 0) -
-          (a.deliverable_type === matchType ? 1 : 0),
+          (fits(b.deliverable_type) ? 1 : 0) - (fits(a.deliverable_type) ? 1 : 0),
       )
     : assignable;
 
@@ -413,7 +420,7 @@ export function CalendarBoard({
                           <option value="">Choose…</option>
                           {assignOptions.map((d) => (
                             <option key={d.id} value={d.id}>
-                              {matchType && d.deliverable_type === matchType ? "★ " : ""}
+                              {fits(d.deliverable_type) ? "★ " : ""}
                               {d.sponsorName} · {deliverableTypeLabel(d.deliverable_type)}
                               {d.service_month.slice(0, 7) !== month
                                 ? ` (owed ${d.service_month.slice(0, 7)})`
@@ -428,6 +435,12 @@ export function CalendarBoard({
                           Assign
                         </Button>
                       </div>
+                    )}
+                    {matchType && EMAIL_TIER_RANK[matchType] > 1 && (
+                      <p className="text-xs text-muted-foreground">
+                        ★ fits this slot. A higher email tier fulfills a lower one
+                        — this slot can also take a Feature or Lower deliverable.
+                      </p>
                     )}
                   </div>
 
