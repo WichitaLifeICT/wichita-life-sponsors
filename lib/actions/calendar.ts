@@ -66,6 +66,41 @@ export async function updateSlot(
   redirect(`/calendar?month=${parsed.data.scheduled_date.slice(0, 7)}`);
 }
 
+/**
+ * Move a slot to a different day and keep its assigned deliverables in sync
+ * (their scheduled_date follows). Used by the quick date picker in the slot
+ * dialog so you can adjust the date without opening the full edit form.
+ */
+export async function rescheduleSlot(
+  slotId: string,
+  date: string,
+  month: string,
+) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) redirect(`/calendar?month=${month}`);
+
+  const supabase = await createClient();
+  await supabase
+    .from("content_slots")
+    .update({ scheduled_date: date })
+    .eq("id", slotId);
+
+  const { data: assignments } = await supabase
+    .from("deliverable_slot_assignments")
+    .select("deliverable_id")
+    .eq("content_slot_id", slotId);
+  const ids = (assignments ?? []).map((a) => a.deliverable_id as string);
+  if (ids.length > 0) {
+    await supabase
+      .from("deliverables")
+      .update({ scheduled_date: date })
+      .in("id", ids);
+  }
+
+  revalidatePath("/calendar");
+  revalidatePath("/deliverables");
+  redirect(`/calendar?month=${date.slice(0, 7)}`);
+}
+
 const DEFAULT_TIERS = ["Headline", "Feature", "Lower", "Event banner"];
 
 // Tiers that only run on specific weekdays (0=Sun … 6=Sat), regardless of which

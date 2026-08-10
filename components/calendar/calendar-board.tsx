@@ -12,6 +12,7 @@ import {
   unassignDeliverable,
   addCalendarBlock,
   deleteCalendarBlock,
+  rescheduleSlot,
 } from "@/lib/actions/calendar";
 import type {
   SlotWithAssignments,
@@ -414,6 +415,27 @@ export function CalendarBoard({
                 />
               ) : (
                 <div className="space-y-4">
+                  {/* Quick date adjust — moves the slot + its deliverables */}
+                  <div className="flex items-center justify-between gap-2 rounded-md border p-2">
+                    <label htmlFor="slot-date" className="text-sm font-medium">
+                      Date
+                    </label>
+                    <input
+                      id="slot-date"
+                      type="date"
+                      defaultValue={manageSlot.scheduled_date}
+                      disabled={busy}
+                      onChange={(e) => {
+                        const v = e.target.value;
+                        if (v && v !== manageSlot.scheduled_date) {
+                          setBusy(true);
+                          rescheduleSlot(manageSlot.id, v, month);
+                        }
+                      }}
+                      className="h-8 rounded-md border border-input bg-transparent px-2 text-sm"
+                    />
+                  </div>
+
                   {/* Assigned deliverables */}
                   <div>
                     <p className="mb-2 text-xs uppercase text-muted-foreground">
