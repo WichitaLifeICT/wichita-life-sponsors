@@ -8,12 +8,15 @@ const BILLING_FREQUENCY = [
   "custom",
 ] as const;
 
+// Keep in sync with DELIVERABLE_TYPE_OPTIONS in lib/labels.ts (plus the legacy
+// newsletter_placement value, still accepted for existing data).
 const DELIVERABLE_TYPE = [
   "newsletter_placement",
   "newsletter_headline",
   "newsletter_feature",
   "newsletter_lower",
   "event_banner",
+  "deep_dive_sponsored",
   "dedicated_email",
   "social_post",
   "social_story",
