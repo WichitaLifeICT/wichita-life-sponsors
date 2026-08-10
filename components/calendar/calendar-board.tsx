@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Plus, Trash2, Pencil, X } from "lucide-react";
+import { Plus, Trash2, Pencil, X, Ban } from "lucide-react";
 
 import {
   createSlot,
@@ -10,12 +10,15 @@ import {
   deleteSlot,
   assignDeliverable,
   unassignDeliverable,
+  addCalendarBlock,
+  deleteCalendarBlock,
 } from "@/lib/actions/calendar";
 import type {
   SlotWithAssignments,
   SlotFill,
   SponsorScheduling,
   UnscheduledDeliverable,
+  CalendarBlockRow,
 } from "@/lib/data/calendar";
 import {
   SLOT_TYPE_OPTIONS,
@@ -79,18 +82,22 @@ export function CalendarBoard({
   slots,
   scheduling,
   carryIn = [],
+  blocks = [],
 }: {
   month: string;
   view: "month" | "agenda";
   slots: SlotWithAssignments[];
   scheduling: SponsorScheduling[];
   carryIn?: UnscheduledDeliverable[];
+  blocks?: CalendarBlockRow[];
 }) {
+  const blocksByDate = new Map(blocks.map((b) => [b.block_date, b]));
   const unscheduled = scheduling.flatMap((g) => g.unscheduled);
   // Everything assignable onto this month's calendar: this month's unscheduled
   // items plus still-open items owed earlier (annual/quarterly carryover).
   const assignable = [...unscheduled, ...carryIn];
   const [newSlotDate, setNewSlotDate] = useState<string | null>(null);
+  const [blockDate, setBlockDate] = useState<string | null>(null);
   const [manageId, setManageId] = useState<string | null>(null);
   const [editing, setEditing] = useState(false);
   const [assignId, setAssignId] = useState("");
@@ -167,7 +174,10 @@ export function CalendarBoard({
           <MonthGrid
             month={month}
             slotsByDate={slotsByDate}
+            blocksByDate={blocksByDate}
             onNewSlot={setNewSlotDate}
+            onBlockDay={setBlockDate}
+            onRemoveBlock={(id) => deleteCalendarBlock(id, month)}
             onOpenSlot={(id) => {
               setManageId(id);
               setEditing(false);
@@ -300,6 +310,51 @@ export function CalendarBoard({
             submitLabel="Create slot"
             onCancel={() => setNewSlotDate(null)}
           />
+        </DialogContent>
+      </Dialog>
+
+      {/* Block day dialog */}
+      <Dialog
+        open={blockDate !== null}
+        onOpenChange={(o) => !o && setBlockDate(null)}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Block a day</DialogTitle>
+          </DialogHeader>
+          <form
+            action={addCalendarBlock.bind(null, month)}
+            className="space-y-4"
+          >
+            <input type="hidden" name="block_date" value={blockDate ?? ""} />
+            <p className="text-sm text-muted-foreground">
+              Marks {blockDate ? formatDate(blockDate) : "this day"} as off — no
+              posts go out. Any slots already on that day are removed (their
+              deliverables go back to unscheduled).
+            </p>
+            <div className="space-y-2">
+              <label htmlFor="block_name" className="text-sm font-medium">
+                Name
+              </label>
+              <input
+                id="block_name"
+                name="name"
+                defaultValue="Holiday"
+                placeholder="e.g. Thanksgiving, Team offsite"
+                className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              />
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setBlockDate(null)}
+              >
+                Cancel
+              </Button>
+              <Button type="submit">Block day</Button>
+            </div>
+          </form>
         </DialogContent>
       </Dialog>
 
@@ -524,7 +579,10 @@ export function CalendarBoard({
 function MonthGrid({
   month,
   slotsByDate,
+  blocksByDate,
   onNewSlot,
+  onBlockDay,
+  onRemoveBlock,
   onOpenSlot,
   chipLabel,
   dragging,
@@ -534,7 +592,10 @@ function MonthGrid({
 }: {
   month: string;
   slotsByDate: Map<string, SlotWithAssignments[]>;
+  blocksByDate: Map<string, CalendarBlockRow>;
   onNewSlot: (date: string) => void;
+  onBlockDay: (date: string) => void;
+  onRemoveBlock: (id: string) => void;
   onOpenSlot: (id: string) => void;
   chipLabel: (s: SlotWithAssignments) => string;
   dragging: boolean;
@@ -562,26 +623,63 @@ function MonthGrid({
             ? `${month}-${String(day).padStart(2, "0")}`
             : null;
           const daySlots = dateStr ? slotsByDate.get(dateStr) ?? [] : [];
+          const block = dateStr ? blocksByDate.get(dateStr) : undefined;
           return (
             <div
               key={i}
               className={cn(
                 "group min-h-24 border-b border-r p-1 last:border-r-0",
                 !inMonth && "bg-muted/20",
+                block && "bg-destructive/5",
               )}
             >
               {inMonth && (
                 <>
                   <div className="mb-1 flex items-center justify-between">
                     <span className="px-1 text-xs text-muted-foreground">{day}</span>
-                    <button
-                      onClick={() => onNewSlot(dateStr!)}
-                      className="rounded p-0.5 text-muted-foreground opacity-0 hover:bg-accent group-hover:opacity-100"
-                      aria-label={`Add slot on ${dateStr}`}
-                    >
-                      <Plus className="size-3.5" />
-                    </button>
+                    {!block && (
+                      <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100">
+                        <button
+                          onClick={() => onBlockDay(dateStr!)}
+                          className="rounded p-0.5 text-muted-foreground hover:bg-accent"
+                          aria-label={`Block ${dateStr}`}
+                          title="Block this day (holiday / off)"
+                        >
+                          <Ban className="size-3.5" />
+                        </button>
+                        <button
+                          onClick={() => onNewSlot(dateStr!)}
+                          className="rounded p-0.5 text-muted-foreground hover:bg-accent"
+                          aria-label={`Add slot on ${dateStr}`}
+                        >
+                          <Plus className="size-3.5" />
+                        </button>
+                      </div>
+                    )}
                   </div>
+                  {block ? (
+                    <div className="rounded border border-destructive/30 bg-destructive/10 px-1.5 py-1 text-xs">
+                      <div className="flex items-start justify-between gap-1">
+                        <span
+                          className="truncate font-medium text-destructive"
+                          title={block.name}
+                        >
+                          {block.name}
+                        </span>
+                        <button
+                          onClick={() => onRemoveBlock(block.id)}
+                          className="shrink-0 text-muted-foreground hover:text-foreground"
+                          aria-label="Remove block"
+                          title="Remove block"
+                        >
+                          <X className="size-3.5" />
+                        </button>
+                      </div>
+                      <span className="text-[10px] text-muted-foreground">
+                        Blocked — no posts
+                      </span>
+                    </div>
+                  ) : (
                   <div className="space-y-1">
                     {daySlots.map((s) => (
                       <div
@@ -629,6 +727,7 @@ function MonthGrid({
                       </div>
                     ))}
                   </div>
+                  )}
                 </>
               )}
             </div>

@@ -104,6 +104,14 @@ export async function generateEmailSlots(month: string, formData: FormData) {
     (existing ?? []).map((s) => `${s.scheduled_date}|${s.title ?? ""}`),
   );
 
+  // Skip any blocked days (holidays / off-days) this month.
+  const { data: blocks } = await supabase
+    .from("calendar_blocks")
+    .select("block_date")
+    .gte("block_date", `${month}-01`)
+    .lte("block_date", `${month}-${String(totalDays).padStart(2, "0")}`);
+  const blockedDates = new Set((blocks ?? []).map((b) => b.block_date as string));
+
   const toInsert: {
     organization_id: string;
     slot_type: "newsletter";
@@ -116,6 +124,7 @@ export async function generateEmailSlots(month: string, formData: FormData) {
     const weekday = new Date(Date.UTC(y, m - 1, day)).getUTCDay();
     if (!weekdays.has(weekday)) continue;
     const date = `${month}-${String(day).padStart(2, "0")}`;
+    if (blockedDates.has(date)) continue; // holiday / off-day
     for (const tier of tiers) {
       // Weekday-restricted tiers (e.g. Deep Dive = Wednesday) only appear on
       // their day, even if other send days are selected.
@@ -136,6 +145,81 @@ export async function generateEmailSlots(month: string, formData: FormData) {
     await supabase.from("content_slots").insert(toInsert);
   }
 
+  revalidatePath("/calendar");
+  redirect(`/calendar?month=${month}`);
+}
+
+/** Unschedule + delete every content slot on a given date. */
+async function clearSlotsOnDate(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  date: string,
+) {
+  const { data: slots } = await supabase
+    .from("content_slots")
+    .select("id")
+    .eq("scheduled_date", date);
+  const slotIds = (slots ?? []).map((s) => s.id as string);
+  if (slotIds.length === 0) return;
+
+  const { data: assignments } = await supabase
+    .from("deliverable_slot_assignments")
+    .select("deliverable_id")
+    .in("content_slot_id", slotIds);
+  const deliverableIds = (assignments ?? []).map((a) => a.deliverable_id as string);
+  if (deliverableIds.length > 0) {
+    await supabase
+      .from("deliverables")
+      .update({ scheduled_date: null })
+      .in("id", deliverableIds);
+    await supabase
+      .from("deliverables")
+      .update({ status: "not_scheduled" })
+      .in("id", deliverableIds)
+      .eq("status", "scheduled");
+  }
+  await supabase.from("content_slots").delete().in("id", slotIds);
+}
+
+/**
+ * Block a day (holiday / custom off-day): no posts go out that day. Clears any
+ * slots already on that date and prevents auto-schedule from adding more.
+ */
+export async function addCalendarBlock(month: string, formData: FormData) {
+  const session = await getSessionContext();
+  if (!session?.organization) redirect("/login");
+
+  const date = String(formData.get("block_date") ?? "");
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+    redirect(`/calendar?month=${month}`);
+  }
+  const name = String(formData.get("name") ?? "").trim() || "Holiday";
+
+  const supabase = await createClient();
+  const { data: existing } = await supabase
+    .from("calendar_blocks")
+    .select("id")
+    .eq("block_date", date)
+    .maybeSingle();
+  if (existing) {
+    await supabase.from("calendar_blocks").update({ name }).eq("id", existing.id);
+  } else {
+    await supabase.from("calendar_blocks").insert({
+      organization_id: session.organization.id,
+      block_date: date,
+      name,
+    });
+  }
+
+  await clearSlotsOnDate(supabase, date);
+
+  revalidatePath("/calendar");
+  redirect(`/calendar?month=${month}`);
+}
+
+/** Remove a day block. */
+export async function deleteCalendarBlock(id: string, month: string) {
+  const supabase = await createClient();
+  await supabase.from("calendar_blocks").delete().eq("id", id);
   revalidatePath("/calendar");
   redirect(`/calendar?month=${month}`);
 }

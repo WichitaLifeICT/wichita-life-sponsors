@@ -4,6 +4,7 @@ import {
   getSlotsInRange,
   getMonthlySchedulingBySponsor,
   getCarryInUnscheduled,
+  getBlocksInRange,
   monthRange,
 } from "@/lib/data/calendar";
 import { getSponsorsForSelect } from "@/lib/data/sponsors";
@@ -34,7 +35,7 @@ export default async function CalendarPage({
   const view = str(sp.view) === "agenda" ? "agenda" : "month";
   const { start, end } = monthRange(month);
 
-  const [slots, scheduling, carryIn, sponsors] = await Promise.all([
+  const [slots, scheduling, carryIn, blocks, sponsors] = await Promise.all([
     getSlotsInRange(start, end, {
       type: str(sp.type),
       group: str(sp.group) as "newsletter" | "social" | undefined,
@@ -42,6 +43,7 @@ export default async function CalendarPage({
     }),
     getMonthlySchedulingBySponsor(month),
     getCarryInUnscheduled(month),
+    getBlocksInRange(start, end),
     getSponsorsForSelect(),
   ]);
 
@@ -68,6 +70,7 @@ export default async function CalendarPage({
         slots={slots}
         scheduling={scheduling}
         carryIn={carryIn}
+        blocks={blocks}
       />
     </div>
   );

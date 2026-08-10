@@ -131,6 +131,31 @@ export async function getSlotsInRange(
   return result;
 }
 
+export interface CalendarBlockRow {
+  id: string;
+  block_date: string;
+  name: string;
+}
+
+/** Day blocks (holidays / off-days) within a date range. */
+export async function getBlocksInRange(
+  start: string,
+  end: string,
+): Promise<CalendarBlockRow[]> {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("calendar_blocks")
+    .select("id, block_date, name")
+    .gte("block_date", start)
+    .lte("block_date", end)
+    .order("block_date", { ascending: true });
+  return (data ?? []).map((b) => ({
+    id: b.id as string,
+    block_date: b.block_date as string,
+    name: b.name as string,
+  }));
+}
+
 export interface UnscheduledDeliverable {
   id: string;
   deliverable_type: DeliverableType;

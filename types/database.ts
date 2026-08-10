@@ -190,6 +190,14 @@ export interface GenerationRun {
   created_at: string;
 }
 
+export interface CalendarBlock {
+  id: string;
+  organization_id: string;
+  block_date: string;
+  name: string;
+  created_at: string;
+}
+
 export interface ContentSlot {
   id: string;
   organization_id: string;
