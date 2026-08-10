@@ -111,6 +111,10 @@ export function planGeneration(
 
     for (const eff of sub.effective) {
       if (eff.quantity <= 0) continue;
+      // Annual / one-time deliverables are a flexible pool owed for the whole
+      // period (placed on the calendar any time within it) — they're seeded
+      // separately (seedFlexibleDeliverables), not by month-by-month generation.
+      if (eff.recurrence === "annually" || eff.recurrence === "one_time") continue;
       if (!recurrenceApplies(eff.recurrence, monthsSinceStart)) continue;
 
       for (let seq = 1; seq <= eff.quantity; seq++) {

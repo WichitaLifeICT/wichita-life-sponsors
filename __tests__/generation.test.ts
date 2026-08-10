@@ -110,14 +110,22 @@ describe("planGeneration", () => {
     expect(planGeneration("2026-04-01", [s], new Set()).toCreate).toHaveLength(1);
   });
 
-  it("applies one_time only in the start month", () => {
-    const s = sub({
+  it("skips annual / one_time — those are the flexible pool, not monthly generation", () => {
+    const oneTime = sub({
       startDate: "2026-03-01",
       effective: [
         { deliverable_type: "event_sponsorship", quantity: 1, recurrence: "one_time" },
       ],
     });
-    expect(planGeneration("2026-03-01", [s], new Set()).toCreate).toHaveLength(1);
-    expect(planGeneration("2026-04-01", [s], new Set()).toCreate).toHaveLength(0);
+    // Even in the start month, monthly generation does not create them.
+    expect(planGeneration("2026-03-01", [oneTime], new Set()).toCreate).toHaveLength(0);
+
+    const annual = sub({
+      startDate: "2026-01-01",
+      effective: [
+        { deliverable_type: "social_post", quantity: 6, recurrence: "annually" },
+      ],
+    });
+    expect(planGeneration("2026-01-01", [annual], new Set()).toCreate).toHaveLength(0);
   });
 });

@@ -6,7 +6,10 @@ import { z } from "zod";
 
 import { createClient } from "@/lib/supabase/server";
 import { getSessionContext } from "@/lib/data/session";
-import { runGenerationForMonth } from "@/lib/data/generation";
+import {
+  runGenerationForMonth,
+  seedFlexibleForAllSponsors,
+} from "@/lib/data/generation";
 import { deliverableTypeLabel } from "@/lib/labels";
 import { toServiceMonth, addMonths } from "@/lib/domain/dates";
 
@@ -19,8 +22,12 @@ export async function runGeneration(serviceMonth: string) {
   if (!session?.organization) redirect("/login");
 
   await runGenerationForMonth(serviceMonth, session.organization.id, session.userId);
+  // Also top up the flexible (annual / one-time) pool for every sponsor, so
+  // "6 posts over the year" style items exist and can be placed on the calendar.
+  await seedFlexibleForAllSponsors(session.organization.id, session.userId);
 
   revalidatePath("/deliverables");
+  revalidatePath("/calendar");
   redirect(`/deliverables?month=${serviceMonth.slice(0, 7)}`);
 }
 

@@ -427,10 +427,14 @@ export async function getSponsorDetail(
       .order("scheduled_date", { ascending: true, nullsFirst: false }),
   ]);
 
-  // "Behind": owed deliverables that are past their due date or from a past month.
+  // "Behind": owed deliverables that are past their due date or from a past
+  // month. Flexible-schedule items (annual / one-time pool) are owed for the
+  // whole period and placed any time, so they're never "behind" by month —
+  // only if they have a specific due date that has passed.
   const behind = ((outstanding ?? []) as Deliverable[]).filter(
     (d) =>
-      (d.due_date && d.due_date < today) || d.service_month < serviceMonth,
+      (d.due_date && d.due_date < today) ||
+      (!d.flexible_schedule && d.service_month < serviceMonth),
   );
 
   const subscription =

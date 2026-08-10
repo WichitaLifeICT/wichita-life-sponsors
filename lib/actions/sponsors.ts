@@ -5,7 +5,10 @@ import { redirect } from "next/navigation";
 
 import { createClient } from "@/lib/supabase/server";
 import { getSessionContext } from "@/lib/data/session";
-import { runGenerationForMonth } from "@/lib/data/generation";
+import {
+  runGenerationForMonth,
+  seedFlexibleDeliverables,
+} from "@/lib/data/generation";
 import { getSponsorBilling } from "@/lib/data/billing";
 import { sponsorSchema, type SponsorParsed } from "@/lib/validations/sponsor";
 import { todayISO, currentServiceMonth, toServiceMonth } from "@/lib/domain/dates";
@@ -204,6 +207,9 @@ async function autoGenerateForSponsor(
   for (const m of months) {
     await runGenerationForMonth(m, orgId, userId, sponsorId);
   }
+  // Seed annual / one-time items as a flexible pool (owed for the period,
+  // schedulable any time) so e.g. "6 social posts over the year" show up.
+  await seedFlexibleDeliverables(orgId, userId, sponsorId);
 }
 
 /**

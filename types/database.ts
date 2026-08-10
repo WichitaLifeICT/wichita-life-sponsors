@@ -163,6 +163,7 @@ export interface Deliverable {
   content_url: string | null;
   asset_status: AssetStatus;
   notes: string | null;
+  flexible_schedule: boolean;
   is_demo: boolean;
   created_at: string;
   updated_at: string;

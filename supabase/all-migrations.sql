@@ -760,3 +760,12 @@ update content_slots set deliverable_type = 'podcast_mention'
   where deliverable_type is null and slot_type = 'podcast';
 update content_slots set deliverable_type = 'event_sponsorship'
   where deliverable_type is null and slot_type = 'event';
+
+
+-- =============================================================================
+-- >>> 20260101000013_flexible_deliverables.sql <<<
+-- Flexible-schedule (annual / one-time pool) deliverables.
+-- =============================================================================
+
+alter table deliverables
+  add column if not exists flexible_schedule boolean not null default false;

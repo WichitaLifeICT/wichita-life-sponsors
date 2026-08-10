@@ -456,7 +456,8 @@ export default async function SponsorDetailPage({
                           d.status,
                         ) &&
                         ((d.due_date && d.due_date < today) ||
-                          d.service_month < serviceMonth);
+                          (!d.flexible_schedule &&
+                            d.service_month < serviceMonth));
                       return (
                         <TableRow key={d.id}>
                           <TableCell>

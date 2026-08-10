@@ -3,6 +3,12 @@ import type { DeliverableType, Recurrence } from "@/types/database";
 import { deliverableTypeLabel } from "@/lib/labels";
 import { resolveEffectiveDeliverables } from "@/lib/domain/deliverable-rules";
 import {
+  currentServiceMonth,
+  toServiceMonth,
+  addMonths,
+  monthsBetween,
+} from "@/lib/domain/dates";
+import {
   planGeneration,
   existingKeyFor,
   type GenerationSubscriptionInput,
@@ -180,6 +186,136 @@ function buildPreview(
     skipped: plan.skipped,
     lastRunAt: ctx.lastRunAt,
   };
+}
+
+/**
+ * Seed a sponsor's ANNUAL / ONE-TIME deliverables as a flexible pool — e.g.
+ * "6 social posts over the year". Unlike monthly generation, these are owed for
+ * the whole period and can be scheduled onto the calendar any time within it, so
+ * they're created once per period (not per month) with flexible_schedule=true so
+ * they never count as "behind". Idempotent: only missing sequences are added.
+ * Returns the number created.
+ */
+export async function seedFlexibleDeliverables(
+  orgId: string,
+  userId: string | null,
+  sponsorId: string,
+): Promise<number> {
+  const supabase = await createClient();
+
+  const { data: sub } = await supabase
+    .from("sponsor_subscriptions")
+    .select("id, package_id, start_date, end_date, auto_generate_deliverables")
+    .eq("sponsor_id", sponsorId)
+    .eq("status", "active")
+    .maybeSingle();
+  if (!sub || !sub.auto_generate_deliverables || !sub.start_date) return 0;
+
+  const [{ data: rules }, { data: overrides }] = await Promise.all([
+    sub.package_id
+      ? supabase
+          .from("package_deliverable_rules")
+          .select("deliverable_type, quantity, recurrence")
+          .eq("package_id", sub.package_id)
+      : Promise.resolve({ data: [] as unknown[] }),
+    supabase
+      .from("subscription_deliverable_overrides")
+      .select("deliverable_type, quantity, recurrence")
+      .eq("sponsor_subscription_id", sub.id),
+  ]);
+
+  const effective = resolveEffectiveDeliverables(
+    (rules ?? []) as {
+      deliverable_type: DeliverableType;
+      quantity: number;
+      recurrence: Recurrence;
+    }[],
+    (overrides ?? []) as {
+      deliverable_type: DeliverableType;
+      quantity: number;
+      recurrence: Recurrence;
+    }[],
+  ).filter((e) => e.recurrence === "annually" || e.recurrence === "one_time");
+  if (effective.length === 0) return 0;
+
+  const current = currentServiceMonth();
+  const startMonth = toServiceMonth(sub.start_date as string);
+  const endMonth = sub.end_date ? toServiceMonth(sub.end_date as string) : null;
+
+  const rows: Record<string, unknown>[] = [];
+  for (const eff of effective) {
+    if (eff.quantity <= 0) continue;
+
+    // The month this period is "owed for": one-time -> the start month;
+    // annual -> this contract year's anniversary (start + 12*year), not past
+    // years. Future starts use the start month.
+    let owedMonth = startMonth;
+    if (eff.recurrence === "annually") {
+      const since = monthsBetween(startMonth, current);
+      if (since >= 12) {
+        owedMonth = addMonths(startMonth, Math.floor(since / 12) * 12);
+      }
+    }
+    if (endMonth && monthsBetween(owedMonth, endMonth) < 0) continue;
+
+    const { data: existing } = await supabase
+      .from("deliverables")
+      .select("sequence")
+      .eq("sponsor_subscription_id", sub.id)
+      .eq("deliverable_type", eff.deliverable_type)
+      .eq("original_service_month", owedMonth);
+    const have = new Set(
+      (existing ?? []).map((r) => r.sequence as number).filter((n) => n != null),
+    );
+
+    for (let seq = 1; seq <= eff.quantity; seq++) {
+      if (have.has(seq)) continue;
+      rows.push({
+        organization_id: orgId,
+        sponsor_id: sponsorId,
+        sponsor_subscription_id: sub.id,
+        deliverable_type: eff.deliverable_type,
+        title: `${deliverableTypeLabel(eff.deliverable_type)} ${seq} of ${eff.quantity}`,
+        service_month: owedMonth,
+        original_service_month: owedMonth,
+        sequence: seq,
+        quantity_total: eff.quantity,
+        status: "not_scheduled" as const,
+        asset_status: "not_needed" as const,
+        flexible_schedule: true,
+      });
+    }
+  }
+
+  if (rows.length > 0) {
+    await supabase.from("deliverables").insert(rows);
+    await supabase.from("generation_runs").insert({
+      organization_id: orgId,
+      service_month: current,
+      run_by: userId,
+      created_count: rows.length,
+      skipped_count: 0,
+    });
+  }
+  return rows.length;
+}
+
+/** Seed the flexible (annual / one-time) pool for every active sponsor. */
+export async function seedFlexibleForAllSponsors(
+  orgId: string,
+  userId: string | null,
+): Promise<number> {
+  const supabase = await createClient();
+  const { data: subs } = await supabase
+    .from("sponsor_subscriptions")
+    .select("sponsor_id")
+    .eq("status", "active");
+  const sponsorIds = [...new Set((subs ?? []).map((s) => s.sponsor_id as string))];
+  let total = 0;
+  for (const id of sponsorIds) {
+    total += await seedFlexibleDeliverables(orgId, userId, id);
+  }
+  return total;
 }
 
 /** Used by the run action: returns the concrete plan plus context for inserts. */
