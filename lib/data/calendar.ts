@@ -131,6 +131,76 @@ export async function getSlotsInRange(
   return result;
 }
 
+export interface InventoryStat {
+  key: string;
+  label: string;
+  filled: number; // spots taken
+  open: number; // spots still available
+  capacity: number; // total spots
+}
+
+/**
+ * Month inventory summary by ad type: how many Email Headline / Email Feature /
+ * social spots exist, and how many are filled vs still open. Independent of the
+ * calendar's filter chips so the top-of-page totals stay stable.
+ */
+export async function getInventorySummary(
+  start: string,
+  end: string,
+): Promise<InventoryStat[]> {
+  const supabase = await createClient();
+  const { data: slots } = await supabase
+    .from("content_slots")
+    .select("id, deliverable_type, capacity")
+    .gte("scheduled_date", start)
+    .lte("scheduled_date", end);
+  const slotRows = (slots ?? []) as {
+    id: string;
+    deliverable_type: string | null;
+    capacity: number;
+  }[];
+
+  const slotIds = slotRows.map((s) => s.id);
+  const assignCount = new Map<string, number>();
+  if (slotIds.length > 0) {
+    const { data: assigns } = await supabase
+      .from("deliverable_slot_assignments")
+      .select("content_slot_id")
+      .in("content_slot_id", slotIds);
+    for (const a of assigns ?? []) {
+      const k = a.content_slot_id as string;
+      assignCount.set(k, (assignCount.get(k) ?? 0) + 1);
+    }
+  }
+
+  const cats: { key: string; label: string; types: Set<string> }[] = [
+    { key: "headline", label: "Email — Headline", types: new Set(["newsletter_headline"]) },
+    { key: "feature", label: "Email — Feature", types: new Set(["newsletter_feature"]) },
+    {
+      key: "social",
+      label: "Social posts",
+      types: new Set(["social_post", "social_story", "social_reel"]),
+    },
+  ];
+
+  return cats.map((c) => {
+    let filled = 0;
+    let capacity = 0;
+    for (const s of slotRows) {
+      if (!s.deliverable_type || !c.types.has(s.deliverable_type)) continue;
+      capacity += s.capacity;
+      filled += assignCount.get(s.id) ?? 0;
+    }
+    return {
+      key: c.key,
+      label: c.label,
+      filled,
+      open: Math.max(0, capacity - filled),
+      capacity,
+    };
+  });
+}
+
 export interface CalendarBlockRow {
   id: string;
   block_date: string;

@@ -5,6 +5,7 @@ import {
   getMonthlySchedulingBySponsor,
   getCarryInUnscheduled,
   getBlocksInRange,
+  getInventorySummary,
   monthRange,
 } from "@/lib/data/calendar";
 import { getSponsorsForSelect } from "@/lib/data/sponsors";
@@ -35,17 +36,19 @@ export default async function CalendarPage({
   const view = str(sp.view) === "agenda" ? "agenda" : "month";
   const { start, end } = monthRange(month);
 
-  const [slots, scheduling, carryIn, blocks, sponsors] = await Promise.all([
-    getSlotsInRange(start, end, {
-      type: str(sp.type),
-      group: str(sp.group) as "newsletter" | "social" | undefined,
-      fill: str(sp.fill) as "open" | "filled" | undefined,
-    }),
-    getMonthlySchedulingBySponsor(month),
-    getCarryInUnscheduled(month),
-    getBlocksInRange(start, end),
-    getSponsorsForSelect(),
-  ]);
+  const [slots, scheduling, carryIn, blocks, inventory, sponsors] =
+    await Promise.all([
+      getSlotsInRange(start, end, {
+        type: str(sp.type),
+        group: str(sp.group) as "newsletter" | "social" | undefined,
+        fill: str(sp.fill) as "open" | "filled" | undefined,
+      }),
+      getMonthlySchedulingBySponsor(month),
+      getCarryInUnscheduled(month),
+      getBlocksInRange(start, end),
+      getInventorySummary(start, end),
+      getSponsorsForSelect(),
+    ]);
 
   return (
     <div className="space-y-6">
@@ -60,6 +63,27 @@ export default async function CalendarPage({
           </div>
         }
       />
+
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+        {inventory.map((stat) => (
+          <div key={stat.key} className="rounded-lg border bg-card p-3">
+            <p className="text-xs text-muted-foreground">{stat.label}</p>
+            <p className="mt-0.5 text-sm">
+              <span className="text-lg font-semibold tabular-nums">
+                {stat.filled}
+              </span>{" "}
+              filled ·{" "}
+              <span className="font-medium tabular-nums text-success">
+                {stat.open}
+              </span>{" "}
+              available
+            </p>
+            <p className="text-[11px] text-muted-foreground">
+              {stat.capacity} total spot{stat.capacity === 1 ? "" : "s"} this month
+            </p>
+          </div>
+        ))}
+      </div>
 
       <CalendarFilters view={view} />
 
