@@ -11,7 +11,7 @@ import {
   seedFlexibleForAllSponsors,
 } from "@/lib/data/generation";
 import { deliverableTypeLabel } from "@/lib/labels";
-import { toServiceMonth, addMonths } from "@/lib/domain/dates";
+import { toServiceMonth, addMonths, todayISO } from "@/lib/domain/dates";
 
 /**
  * Generate deliverables for a service month. Idempotent: only the rows the plan
@@ -62,6 +62,15 @@ export async function addManualDeliverable(
   if (!session?.organization) return { error: "Your session has expired." };
 
   const serviceMonth = `${parsed.data.service_month}-01`;
+
+  // Optionally log it as already completed ("take credit"), with a date.
+  const completed =
+    formData.get("completed") === "on" || formData.get("completed") === "true";
+  const rawCompletedDate = String(formData.get("completed_date") ?? "");
+  const publishedDate = /^\d{4}-\d{2}-\d{2}$/.test(rawCompletedDate)
+    ? rawCompletedDate
+    : todayISO();
+
   const supabase = await createClient();
   const { error } = await supabase.from("deliverables").insert({
     organization_id: session.organization.id,
@@ -73,8 +82,9 @@ export async function addManualDeliverable(
     original_service_month: serviceMonth,
     due_date: parsed.data.due_date,
     notes: parsed.data.notes ?? null,
-    status: "not_scheduled",
-    asset_status: "missing",
+    status: completed ? "published" : "not_scheduled",
+    published_date: completed ? publishedDate : null,
+    asset_status: completed ? "not_needed" : "missing",
   });
 
   if (error) {

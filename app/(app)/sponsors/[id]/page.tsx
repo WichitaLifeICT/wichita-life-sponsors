@@ -20,6 +20,7 @@ import { AssetUploader } from "@/components/assets/asset-uploader";
 import { AssetGrid } from "@/components/assets/asset-grid";
 import { AddDeliverableDialog } from "@/components/deliverables/add-deliverable-dialog";
 import { DeleteDeliverableButton } from "@/components/deliverables/delete-deliverable-button";
+import { DeliverableCompleteControl } from "@/components/deliverables/deliverable-complete-control";
 import { DeliverableStatusBadge } from "@/components/deliverables/status-badge";
 import { PageHeader } from "@/components/layout/page-header";
 import { Button } from "@/components/ui/button";
@@ -444,6 +445,7 @@ export default async function SponsorDetailPage({
                       <TableHead>Status</TableHead>
                       <TableHead>Scheduled</TableHead>
                       <TableHead>Due</TableHead>
+                      <TableHead className="text-right">Completed</TableHead>
                       <TableHead className="w-8 text-right">
                         <span className="sr-only">Actions</span>
                       </TableHead>
@@ -484,6 +486,14 @@ export default async function SponsorDetailPage({
                           </TableCell>
                           <TableCell className="text-muted-foreground">
                             {d.due_date ? formatDate(d.due_date) : "—"}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <DeliverableCompleteControl
+                              id={d.id}
+                              complete={d.status === "published"}
+                              publishedDate={d.published_date}
+                              returnTo={`/sponsors/${id}`}
+                            />
                           </TableCell>
                           <TableCell className="text-right">
                             <DeleteDeliverableButton

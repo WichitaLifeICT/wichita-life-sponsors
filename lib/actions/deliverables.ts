@@ -76,6 +76,66 @@ export async function updateDeliverableStatus(
   revalidatePath(`/deliverables/${id}`);
 }
 
+/**
+ * Toggle a deliverable's completion from a list view: complete -> published +
+ * a completion (published) date; not complete -> back to not_scheduled with the
+ * date cleared. `date` is the completion date (YYYY-MM-DD); defaults to today.
+ */
+export async function setDeliverableCompletion(
+  id: string,
+  complete: boolean,
+  date: string,
+  returnTo?: string,
+) {
+  const session = await getSessionContext();
+  if (!session?.organization) return;
+  const supabase = await createClient();
+
+  const { data: current } = await supabase
+    .from("deliverables")
+    .select("status")
+    .eq("id", id)
+    .maybeSingle();
+  if (!current) return;
+
+  if (complete) {
+    const published_date = /^\d{4}-\d{2}-\d{2}$/.test(date) ? date : todayISO();
+    await supabase
+      .from("deliverables")
+      .update({ status: "published", published_date })
+      .eq("id", id);
+    if (current.status !== "published") {
+      await logStatusChange(
+        supabase,
+        session.organization.id,
+        id,
+        current.status as string,
+        "published",
+        session.userId,
+      );
+    }
+  } else {
+    await supabase
+      .from("deliverables")
+      .update({ status: "not_scheduled", published_date: null })
+      .eq("id", id);
+    if (current.status === "published") {
+      await logStatusChange(
+        supabase,
+        session.organization.id,
+        id,
+        current.status as string,
+        "not_scheduled",
+        session.userId,
+      );
+    }
+  }
+
+  revalidatePath("/deliverables");
+  revalidatePath("/calendar");
+  if (returnTo) revalidatePath(returnTo);
+}
+
 /** Permanently delete a deliverable (and its slot assignment / history rows). */
 export async function deleteDeliverable(id: string, returnTo?: string) {
   const session = await getSessionContext();

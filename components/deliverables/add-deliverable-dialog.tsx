@@ -48,6 +48,7 @@ export function AddDeliverableDialog({
   );
   const [sponsorId, setSponsorId] = useState(lockedSponsor?.id ?? "");
   const [type, setType] = useState("newsletter_headline");
+  const [completed, setCompleted] = useState(false);
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -135,6 +136,30 @@ export function AddDeliverableDialog({
               <Label htmlFor="due_date">Due date (optional)</Label>
               <Input id="due_date" name="due_date" type="date" />
             </div>
+          </div>
+
+          <div className="space-y-2 rounded-md border bg-muted/30 p-3">
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                name="completed"
+                checked={completed}
+                onChange={(e) => setCompleted(e.target.checked)}
+                className="size-4 rounded border-input"
+              />
+              Mark as already completed (take credit)
+            </label>
+            {completed && (
+              <div className="space-y-1">
+                <Label htmlFor="completed_date">Completion date</Label>
+                <Input
+                  id="completed_date"
+                  name="completed_date"
+                  type="date"
+                  defaultValue={new Date().toISOString().slice(0, 10)}
+                />
+              </div>
+            )}
           </div>
 
           <DialogFooter>
