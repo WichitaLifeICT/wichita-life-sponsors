@@ -13,6 +13,7 @@ import {
 
 import { getSessionContext } from "@/lib/data/session";
 import { getDashboardData } from "@/lib/data/dashboard";
+import { autoFulfillPastScheduled } from "@/lib/data/deliverables";
 import { getMonthlyRevenue } from "@/lib/data/billing";
 import { currentServiceMonth, addMonths } from "@/lib/domain/dates";
 import { REVENUE_START_MONTH } from "@/lib/config";
@@ -91,6 +92,8 @@ export default async function DashboardPage({
   // Previous / current / projected-next window (relative to the selected month).
   const prevMonth = addMonths(`${month}-01`, -1).slice(0, 7);
   const nextMonth = addMonths(`${month}-01`, 1).slice(0, 7);
+
+  await autoFulfillPastScheduled();
 
   const [session, d, revenueSeries, trend] = await Promise.all([
     getSessionContext(),

@@ -9,6 +9,7 @@ import {
   getInventorySummary,
   monthRange,
 } from "@/lib/data/calendar";
+import { autoFulfillPastScheduled } from "@/lib/data/deliverables";
 import { getSponsorsForSelect } from "@/lib/data/sponsors";
 import { currentServiceMonth } from "@/lib/domain/dates";
 import { PageHeader } from "@/components/layout/page-header";
@@ -36,6 +37,8 @@ export default async function CalendarPage({
       : currentServiceMonth().slice(0, 7);
   const view = str(sp.view) === "agenda" ? "agenda" : "month";
   const { start, end } = monthRange(month);
+
+  await autoFulfillPastScheduled();
 
   const [slots, scheduling, carryIn, pullForward, blocks, inventory, sponsors] =
     await Promise.all([

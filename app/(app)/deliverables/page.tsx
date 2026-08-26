@@ -5,6 +5,7 @@ import { getGenerationPreview } from "@/lib/data/generation";
 import {
   getMonthlyFulfillment,
   getDeliverables,
+  autoFulfillPastScheduled,
 } from "@/lib/data/deliverables";
 import { getSponsorsForSelect } from "@/lib/data/sponsors";
 import { currentServiceMonth } from "@/lib/domain/dates";
@@ -38,6 +39,8 @@ export default async function DeliverablesPage({
   const serviceMonth = `${month}-01`;
   const monthLabel = formatMonth(serviceMonth);
   const view = str(sp.view) === "board" ? "board" : "table";
+
+  await autoFulfillPastScheduled();
 
   const [preview, fulfillment, deliverables, sponsors] = await Promise.all([
     getGenerationPreview(serviceMonth),

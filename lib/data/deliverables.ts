@@ -5,6 +5,50 @@ import type {
 } from "@/types/database";
 import { todayISO } from "@/lib/domain/dates";
 
+/** Email ad-slot deliverable types (auto-fulfilled once their date passes). */
+const EMAIL_AD_TYPES = [
+  "newsletter_headline",
+  "newsletter_feature",
+  "newsletter_lower",
+  "event_banner",
+  "deep_dive_sponsored",
+  "newsletter_placement",
+  "dedicated_email",
+];
+
+/**
+ * Auto-fulfill: email ad spots that were scheduled and whose scheduled date has
+ * now passed are considered done — mark them published with the completion date
+ * set to the day they ran. Idempotent (only touches still-"scheduled" rows), so
+ * you can still tweak one afterward (uncheck Done / change it) and it won't be
+ * re-fulfilled. Called from the pages that show fulfillment.
+ */
+export async function autoFulfillPastScheduled(): Promise<void> {
+  const supabase = await createClient();
+  const today = todayISO();
+  const { data: rows } = await supabase
+    .from("deliverables")
+    .select("id, scheduled_date")
+    .eq("status", "scheduled")
+    .lt("scheduled_date", today)
+    .in("deliverable_type", EMAIL_AD_TYPES);
+  if (!rows || rows.length === 0) return;
+
+  const byDate = new Map<string, string[]>();
+  for (const r of rows) {
+    const d = r.scheduled_date as string;
+    const arr = byDate.get(d) ?? [];
+    arr.push(r.id as string);
+    byDate.set(d, arr);
+  }
+  for (const [date, ids] of byDate) {
+    await supabase
+      .from("deliverables")
+      .update({ status: "published", published_date: date })
+      .in("id", ids);
+  }
+}
+
 export interface MonthlyFulfillment {
   total: number;
   published: number;

@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 
 import { getSponsorDetail } from "@/lib/data/sponsors";
+import { autoFulfillPastScheduled } from "@/lib/data/deliverables";
 import { getSponsorBilling } from "@/lib/data/billing";
 import { getSponsorAssets } from "@/lib/data/assets";
 import { getSessionContext } from "@/lib/data/session";
@@ -78,6 +79,7 @@ export default async function SponsorDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
+  await autoFulfillPastScheduled();
   const [detail, billing, session, sponsorAssets] = await Promise.all([
     getSponsorDetail(id),
     getSponsorBilling(id),
