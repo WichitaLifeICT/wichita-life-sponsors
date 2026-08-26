@@ -9,6 +9,7 @@ import {
   updateSlot,
   deleteSlot,
   assignDeliverable,
+  assignSponsorToSlot,
   unassignDeliverable,
   addCalendarBlock,
   deleteCalendarBlock,
@@ -83,31 +84,38 @@ export function CalendarBoard({
   slots,
   scheduling,
   carryIn = [],
+  pullForward = [],
   blocks = [],
+  sponsors = [],
 }: {
   month: string;
   view: "month" | "agenda";
   slots: SlotWithAssignments[];
   scheduling: SponsorScheduling[];
   carryIn?: UnscheduledDeliverable[];
+  pullForward?: UnscheduledDeliverable[];
   blocks?: CalendarBlockRow[];
+  sponsors?: { id: string; name: string }[];
 }) {
   const blocksByDate = new Map(blocks.map((b) => [b.block_date, b]));
   const unscheduled = scheduling.flatMap((g) => g.unscheduled);
   // Everything assignable onto this month's calendar: this month's unscheduled
-  // items plus still-open items owed earlier (annual/quarterly carryover).
-  const assignable = [...unscheduled, ...carryIn];
+  // items, still-open items owed earlier (carry-in), and future items you can
+  // pull forward into this month.
+  const assignable = [...unscheduled, ...carryIn, ...pullForward];
   const [newSlotDate, setNewSlotDate] = useState<string | null>(null);
   const [blockDate, setBlockDate] = useState<string | null>(null);
   const [manageId, setManageId] = useState<string | null>(null);
   const [editing, setEditing] = useState(false);
   const [assignId, setAssignId] = useState("");
+  const [assignSponsorId, setAssignSponsorId] = useState("");
   const [busy, setBusy] = useState(false);
   const [draggingId, setDraggingId] = useState<string | null>(null);
-  const [overridePrompt, setOverridePrompt] = useState<{
-    deliverableId: string;
-    slotId: string;
-  } | null>(null);
+  const [overridePrompt, setOverridePrompt] = useState<
+    | { kind: "deliverable"; id: string; slotId: string }
+    | { kind: "sponsor"; id: string; slotId: string }
+    | null
+  >(null);
 
   const manageSlot = slots.find((s) => s.id === manageId) ?? null;
   const matchType = manageSlot
@@ -136,9 +144,23 @@ export function CalendarBoard({
     try {
       const res = await assignDeliverable(deliverableId, slotId, override);
       if (res.needsOverride) {
-        setOverridePrompt({ deliverableId, slotId });
+        setOverridePrompt({ kind: "deliverable", id: deliverableId, slotId });
       } else {
         setAssignId("");
+      }
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function doAssignSponsor(sponsorId: string, slotId: string, override = false) {
+    setBusy(true);
+    try {
+      const res = await assignSponsorToSlot(sponsorId, slotId, override);
+      if (res.needsOverride) {
+        setOverridePrompt({ kind: "sponsor", id: sponsorId, slotId });
+      } else {
+        setAssignSponsorId("");
       }
     } finally {
       setBusy(false);
@@ -521,6 +543,42 @@ export function CalendarBoard({
                     )}
                   </div>
 
+                  {/* Assign a sponsor directly (creates a deliverable) */}
+                  {sponsors.length > 0 && (
+                    <div className="space-y-2 border-t pt-3">
+                      <p className="text-xs uppercase text-muted-foreground">
+                        Or drop a sponsor straight in
+                      </p>
+                      <div className="flex gap-2">
+                        <select
+                          value={assignSponsorId}
+                          onChange={(e) => setAssignSponsorId(e.target.value)}
+                          className="flex h-9 w-full rounded-md border border-input bg-transparent px-2 text-sm"
+                        >
+                          <option value="">Choose a sponsor…</option>
+                          {sponsors.map((s) => (
+                            <option key={s.id} value={s.id}>
+                              {s.name}
+                            </option>
+                          ))}
+                        </select>
+                        <Button
+                          disabled={!assignSponsorId || busy}
+                          onClick={() =>
+                            doAssignSponsor(assignSponsorId, manageSlot.id)
+                          }
+                        >
+                          Add here
+                        </Button>
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        Creates a {chipLabel(manageSlot)} deliverable for this
+                        month and schedules it here — for a pulled-forward or
+                        extra placement, no existing deliverable needed.
+                      </p>
+                    </div>
+                  )}
+
                   {/* Slot actions */}
                   <div className="flex justify-between border-t pt-3">
                     <Button
@@ -583,9 +641,10 @@ export function CalendarBoard({
             <AlertDialogAction
               onClick={() => {
                 if (overridePrompt) {
-                  const { deliverableId, slotId } = overridePrompt;
+                  const { kind, id, slotId } = overridePrompt;
                   setOverridePrompt(null);
-                  doAssign(deliverableId, slotId, true);
+                  if (kind === "sponsor") doAssignSponsor(id, slotId, true);
+                  else doAssign(id, slotId, true);
                 }
               }}
             >

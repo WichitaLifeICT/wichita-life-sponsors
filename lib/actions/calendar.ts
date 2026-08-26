@@ -6,7 +6,11 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getSessionContext } from "@/lib/data/session";
 import { slotSchema } from "@/lib/validations/slot";
-import { slotTypeForDeliverable, EMAIL_TIER_DELIVERABLE_TYPE } from "@/lib/labels";
+import {
+  slotTypeForDeliverable,
+  EMAIL_TIER_DELIVERABLE_TYPE,
+  deliverableTypeLabel,
+} from "@/lib/labels";
 
 export interface SlotActionState {
   error: string | null;
@@ -296,7 +300,9 @@ export interface AssignResult {
 /**
  * Assign a deliverable to a slot: enforces capacity (unless override), moves the
  * deliverable if it was already in another slot, sets its scheduled date to the
- * slot's date, and marks it scheduled when appropriate (service month preserved).
+ * slot's date, marks it scheduled when appropriate, and pulls its service month
+ * to the slot's month — so placing a future (or earlier) deliverable on a day
+ * makes it count for the month you placed it in.
  */
 export async function assignDeliverable(
   deliverableId: string,
@@ -340,16 +346,90 @@ export async function assignDeliverable(
     position: others.length,
   });
 
-  // Update the deliverable's scheduled date + status.
+  // Update the deliverable's scheduled date + service month (the month it's
+  // placed in is the month it counts for — this is what pulls a future ad into
+  // an earlier month, or an earlier one forward).
+  const slotMonth = `${(slot.scheduled_date as string).slice(0, 7)}-01`;
   await supabase
     .from("deliverables")
-    .update({ scheduled_date: slot.scheduled_date })
+    .update({ scheduled_date: slot.scheduled_date, service_month: slotMonth })
     .eq("id", deliverableId);
   await supabase
     .from("deliverables")
     .update({ status: "scheduled" })
     .eq("id", deliverableId)
     .in("status", ["not_scheduled", "waiting_on_assets"]);
+
+  revalidatePath("/calendar");
+  revalidatePath("/deliverables");
+  return { ok: true };
+}
+
+/**
+ * Assign a sponsor directly to a slot by creating a new deliverable of the
+ * slot's type for the slot's month and scheduling it there. Use this to place a
+ * sponsor in an open ad spot even when there's no existing deliverable to draw
+ * from (e.g. a pulled-forward or good-will placement). Enforces capacity.
+ */
+export async function assignSponsorToSlot(
+  sponsorId: string,
+  slotId: string,
+  override = false,
+): Promise<AssignResult> {
+  const session = await getSessionContext();
+  if (!session?.organization) return { ok: false, error: "Session expired." };
+  if (!sponsorId) return { ok: false, error: "Choose a sponsor." };
+
+  const supabase = await createClient();
+
+  const { data: slot } = await supabase
+    .from("content_slots")
+    .select("id, capacity, scheduled_date, deliverable_type, title")
+    .eq("id", slotId)
+    .maybeSingle();
+  if (!slot) return { ok: false, error: "Slot not found." };
+
+  const { data: current } = await supabase
+    .from("deliverable_slot_assignments")
+    .select("deliverable_id")
+    .eq("content_slot_id", slotId);
+  if (!override && (current ?? []).length >= (slot.capacity as number)) {
+    return { ok: false, needsOverride: true };
+  }
+
+  const type =
+    (slot.deliverable_type as string | null) ??
+    EMAIL_TIER_DELIVERABLE_TYPE[(slot.title as string) ?? ""] ??
+    "custom";
+  const serviceMonth = `${(slot.scheduled_date as string).slice(0, 7)}-01`;
+
+  const { data: created, error } = await supabase
+    .from("deliverables")
+    .insert({
+      organization_id: session.organization.id,
+      sponsor_id: sponsorId,
+      sponsor_subscription_id: null,
+      deliverable_type: type,
+      title: deliverableTypeLabel(type),
+      service_month: serviceMonth,
+      original_service_month: serviceMonth,
+      scheduled_date: slot.scheduled_date,
+      status: "scheduled" as const,
+      asset_status: "not_needed" as const,
+    })
+    .select("id")
+    .single();
+  if (error || !created) {
+    console.error("assignSponsorToSlot failed:", error);
+    return { ok: false, error: error?.message ?? "Could not assign the sponsor." };
+  }
+
+  await supabase.from("deliverable_slot_assignments").insert({
+    organization_id: session.organization.id,
+    deliverable_id: created.id,
+    content_slot_id: slotId,
+    position: (current ?? []).length,
+  });
 
   revalidatePath("/calendar");
   revalidatePath("/deliverables");

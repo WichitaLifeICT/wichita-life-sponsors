@@ -4,6 +4,7 @@ import {
   getSlotsInRange,
   getMonthlySchedulingBySponsor,
   getCarryInUnscheduled,
+  getPullForwardUnscheduled,
   getBlocksInRange,
   getInventorySummary,
   monthRange,
@@ -36,7 +37,7 @@ export default async function CalendarPage({
   const view = str(sp.view) === "agenda" ? "agenda" : "month";
   const { start, end } = monthRange(month);
 
-  const [slots, scheduling, carryIn, blocks, inventory, sponsors] =
+  const [slots, scheduling, carryIn, pullForward, blocks, inventory, sponsors] =
     await Promise.all([
       getSlotsInRange(start, end, {
         type: str(sp.type),
@@ -45,6 +46,7 @@ export default async function CalendarPage({
       }),
       getMonthlySchedulingBySponsor(month),
       getCarryInUnscheduled(month),
+      getPullForwardUnscheduled(month),
       getBlocksInRange(start, end),
       getInventorySummary(start, end),
       getSponsorsForSelect(),
@@ -94,7 +96,9 @@ export default async function CalendarPage({
         slots={slots}
         scheduling={scheduling}
         carryIn={carryIn}
+        pullForward={pullForward}
         blocks={blocks}
+        sponsors={sponsors}
       />
     </div>
   );

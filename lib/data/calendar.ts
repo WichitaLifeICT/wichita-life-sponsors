@@ -314,6 +314,50 @@ export async function getCarryInUnscheduled(
     }));
 }
 
+/**
+ * Deliverables owed in a LATER month that are still unscheduled — so you can
+ * pull a future ad into an earlier month (e.g. run a September ad in August).
+ * Limited to the next several months. Excludes archived sponsors.
+ */
+export async function getPullForwardUnscheduled(
+  month: string,
+): Promise<UnscheduledDeliverable[]> {
+  const supabase = await createClient();
+  const windowEnd = addMonths(`${month}-01`, 6); // up to 6 months ahead
+  const { data: deliverables } = await supabase
+    .from("deliverables")
+    .select("id, deliverable_type, sponsor_id, service_month, due_date, status")
+    .gt("service_month", `${month}-01`)
+    .lte("service_month", windowEnd)
+    .is("scheduled_date", null)
+    .order("service_month", { ascending: true });
+
+  const rows = (deliverables ?? []).filter(
+    (d) => !CLOSED.has(d.status as string),
+  );
+  if (rows.length === 0) return [];
+
+  const { data: sponsors } = await supabase
+    .from("sponsors")
+    .select("id, company_name, status");
+  const activeName = new Map(
+    (sponsors ?? [])
+      .filter((s) => s.status !== "archived")
+      .map((s) => [s.id as string, s.company_name as string]),
+  );
+
+  return rows
+    .filter((d) => activeName.has(d.sponsor_id as string))
+    .map((d) => ({
+      id: d.id as string,
+      deliverable_type: d.deliverable_type as DeliverableType,
+      sponsorId: d.sponsor_id as string,
+      sponsorName: activeName.get(d.sponsor_id as string) ?? "Unknown",
+      service_month: d.service_month as string,
+      due_date: (d.due_date as string | null) ?? null,
+    }));
+}
+
 export interface SponsorScheduling {
   sponsorId: string;
   sponsorName: string;
