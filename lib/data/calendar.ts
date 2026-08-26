@@ -361,17 +361,20 @@ export async function getPullForwardUnscheduled(
 export interface SponsorScheduling {
   sponsorId: string;
   sponsorName: string;
-  owed: number;
-  scheduled: number;
-  remaining: number;
-  byType: { deliverable_type: DeliverableType; owed: number; scheduled: number }[];
+  required: number; // contracted from the package/subscription
+  done: number; // scheduled or published (includes extras)
+  over: number; // done beyond required (extra placements)
+  remaining: number; // contracted deliverables not yet placed
+  byType: { deliverable_type: DeliverableType; required: number; done: number }[];
   unscheduled: UnscheduledDeliverable[];
 }
 
 /**
- * Per-sponsor scheduling status for a month: how many deliverables are owed vs
- * already scheduled (or published), plus the specific rows still needing a slot.
- * Sorted so sponsors that still need scheduling come first.
+ * Per-sponsor scheduling status for a month: how many deliverables are required
+ * (contracted, i.e. generated from the package/subscription) vs done (scheduled
+ * or published). Extra / good-will placements (not tied to the subscription)
+ * push "done" past "required" — e.g. 3/2. Sorted so sponsors that still owe
+ * scheduling come first.
  */
 export async function getMonthlySchedulingBySponsor(
   month: string,
@@ -380,7 +383,7 @@ export async function getMonthlySchedulingBySponsor(
   const { data: deliverables } = await supabase
     .from("deliverables")
     .select(
-      "id, deliverable_type, sponsor_id, scheduled_date, status, service_month, due_date",
+      "id, deliverable_type, sponsor_id, sponsor_subscription_id, scheduled_date, status, service_month, due_date",
     )
     .eq("service_month", `${month}-01`);
 
@@ -407,19 +410,21 @@ export async function getMonthlySchedulingBySponsor(
       g = {
         sponsorId: sid,
         sponsorName: sponsorName.get(sid) ?? "Unknown",
-        owed: 0,
-        scheduled: 0,
+        required: 0,
+        done: 0,
+        over: 0,
         remaining: 0,
         byType: [],
         unscheduled: [],
       };
       groups.set(sid, g);
     }
-    g.owed += 1;
+    const linked = d.sponsor_subscription_id != null; // contracted, not an extra
     const sched = isScheduled(d);
-    if (sched) g.scheduled += 1;
-    else {
-      g.remaining += 1;
+    if (linked) g.required += 1;
+    if (sched) g.done += 1;
+    if (linked && !sched) g.remaining += 1;
+    if (!sched) {
       g.unscheduled.push({
         id: d.id as string,
         deliverable_type: d.deliverable_type as DeliverableType,
@@ -431,15 +436,19 @@ export async function getMonthlySchedulingBySponsor(
     }
     const t = g.byType.find((x) => x.deliverable_type === d.deliverable_type);
     if (t) {
-      t.owed += 1;
-      if (sched) t.scheduled += 1;
+      if (linked) t.required += 1;
+      if (sched) t.done += 1;
     } else {
       g.byType.push({
         deliverable_type: d.deliverable_type as DeliverableType,
-        owed: 1,
-        scheduled: sched ? 1 : 0,
+        required: linked ? 1 : 0,
+        done: sched ? 1 : 0,
       });
     }
+  }
+
+  for (const g of groups.values()) {
+    g.over = Math.max(0, g.done - g.required);
   }
 
   return [...groups.values()].sort((a, b) => {

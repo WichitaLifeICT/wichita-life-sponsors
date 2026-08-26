@@ -236,7 +236,7 @@ export function CalendarBoard({
               </p>
             ) : (
               scheduling.map((g) => {
-                const done = g.remaining === 0;
+                const complete = g.remaining === 0;
                 return (
                   <div key={g.sponsorId} className="rounded-md border bg-background p-2">
                     <div className="flex items-center justify-between gap-2">
@@ -246,8 +246,16 @@ export function CalendarBoard({
                       >
                         {g.sponsorName}
                       </Link>
-                      <Badge variant={done ? "success" : "warning"}>
-                        {done ? "All scheduled" : `${g.scheduled}/${g.owed}`}
+                      <Badge
+                        variant={complete ? "success" : "warning"}
+                        title={
+                          g.over > 0
+                            ? `${g.done} done · ${g.required} required (${g.over} extra)`
+                            : `${g.done} done · ${g.required} required`
+                        }
+                      >
+                        {g.done}/{g.required}
+                        {g.over > 0 ? ` · +${g.over}` : ""}
                       </Badge>
                     </div>
                     <div className="mt-1 flex flex-wrap gap-1">
@@ -256,19 +264,25 @@ export function CalendarBoard({
                           key={t.deliverable_type}
                           className={cn(
                             "rounded px-1.5 py-0.5 text-[11px]",
-                            t.scheduled >= t.owed
+                            t.done >= t.required
                               ? "bg-success/10 text-success"
                               : "bg-warning/10 text-warning",
                           )}
                           title={deliverableTypeLabel(t.deliverable_type)}
                         >
-                          {deliverableTypeLabel(t.deliverable_type)} {t.scheduled}/{t.owed}
+                          {deliverableTypeLabel(t.deliverable_type)} {t.done}/{t.required}
                         </span>
                       ))}
                     </div>
                     {g.remaining > 0 && (
                       <p className="mt-1 text-[11px] text-muted-foreground">
                         {g.remaining} still to schedule — open a slot to assign.
+                      </p>
+                    )}
+                    {g.over > 0 && (
+                      <p className="mt-1 text-[11px] text-success">
+                        {g.over} extra placement{g.over === 1 ? "" : "s"} beyond the
+                        package.
                       </p>
                     )}
                   </div>
