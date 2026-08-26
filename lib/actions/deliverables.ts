@@ -136,6 +136,27 @@ export async function setDeliverableCompletion(
   if (returnTo) revalidatePath(returnTo);
 }
 
+/** Change a deliverable's service month (the month it counts for). */
+export async function updateDeliverableServiceMonth(
+  id: string,
+  month: string, // "YYYY-MM"
+  returnTo?: string,
+) {
+  const session = await getSessionContext();
+  if (!session?.organization) return;
+  if (!/^\d{4}-\d{2}$/.test(month)) return;
+
+  const supabase = await createClient();
+  await supabase
+    .from("deliverables")
+    .update({ service_month: `${month}-01` })
+    .eq("id", id);
+
+  revalidatePath("/deliverables");
+  revalidatePath("/calendar");
+  if (returnTo) revalidatePath(returnTo);
+}
+
 /** Permanently delete a deliverable (and its slot assignment / history rows). */
 export async function deleteDeliverable(id: string, returnTo?: string) {
   const session = await getSessionContext();

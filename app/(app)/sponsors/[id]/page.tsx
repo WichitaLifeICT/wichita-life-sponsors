@@ -21,6 +21,7 @@ import { AssetGrid } from "@/components/assets/asset-grid";
 import { AddDeliverableDialog } from "@/components/deliverables/add-deliverable-dialog";
 import { DeleteDeliverableButton } from "@/components/deliverables/delete-deliverable-button";
 import { DeliverableCompleteControl } from "@/components/deliverables/deliverable-complete-control";
+import { ServiceMonthEditor } from "@/components/deliverables/service-month-editor";
 import { DeliverableStatusBadge } from "@/components/deliverables/status-badge";
 import { PageHeader } from "@/components/layout/page-header";
 import { Button } from "@/components/ui/button";
@@ -470,8 +471,12 @@ export default async function SponsorDetailPage({
                               {deliverableTypeLabel(d.deliverable_type)}
                             </Link>
                           </TableCell>
-                          <TableCell className="text-muted-foreground">
-                            {formatMonth(d.original_service_month)}
+                          <TableCell>
+                            <ServiceMonthEditor
+                              id={d.id}
+                              serviceMonth={d.service_month}
+                              returnTo={`/sponsors/${id}`}
+                            />
                           </TableCell>
                           <TableCell>
                             <div className="flex items-center gap-1.5">
