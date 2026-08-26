@@ -1,6 +1,8 @@
 import { createClient } from "@/lib/supabase/server";
-import type { ContentSlot, DeliverableType } from "@/types/database";
-import { addMonths } from "@/lib/domain/dates";
+import type { ContentSlot, DeliverableType, Recurrence } from "@/types/database";
+import { addMonths, toServiceMonth, monthsBetween } from "@/lib/domain/dates";
+import { resolveEffectiveDeliverables } from "@/lib/domain/deliverable-rules";
+import { recurrenceApplies } from "@/lib/domain/generation";
 
 export type SlotFill = "empty" | "partial" | "full" | "overbooked";
 
@@ -369,28 +371,35 @@ export interface SponsorScheduling {
   unscheduled: UnscheduledDeliverable[];
 }
 
+type RuleInput = {
+  deliverable_type: DeliverableType;
+  quantity: number;
+  recurrence: Recurrence;
+};
+
 /**
  * Per-sponsor scheduling status for a month: how many deliverables are required
- * (contracted, i.e. generated from the package/subscription) vs done (scheduled
- * or published). Extra / good-will placements (not tied to the subscription)
- * push "done" past "required" — e.g. 3/2. Sorted so sponsors that still owe
- * scheduling come first.
+ * (the contracted quantity from the package + overrides, applied for this month)
+ * vs done (actual deliverables scheduled or published). Extra / good-will
+ * placements beyond the contract push "done" past "required" — e.g. 3/2. Sorted
+ * so sponsors that still owe scheduling come first.
  */
 export async function getMonthlySchedulingBySponsor(
   month: string,
 ): Promise<SponsorScheduling[]> {
   const supabase = await createClient();
+  const targetMonth = `${month}-01`;
+
   const { data: deliverables } = await supabase
     .from("deliverables")
     .select(
-      "id, deliverable_type, sponsor_id, sponsor_subscription_id, scheduled_date, status, service_month, due_date",
+      "id, deliverable_type, sponsor_id, scheduled_date, status, service_month, due_date",
     )
-    .eq("service_month", `${month}-01`);
+    .eq("service_month", targetMonth);
 
   const rows = (deliverables ?? []).filter(
     (d) => !["skipped", "canceled"].includes(d.status as string),
   );
-  if (rows.length === 0) return [];
 
   const { data: sponsors } = await supabase
     .from("sponsors")
@@ -403,8 +412,7 @@ export async function getMonthlySchedulingBySponsor(
     d.scheduled_date != null || d.status === "published";
 
   const groups = new Map<string, SponsorScheduling>();
-  for (const d of rows) {
-    const sid = d.sponsor_id as string;
+  const ensure = (sid: string): SponsorScheduling => {
     let g = groups.get(sid);
     if (!g) {
       g = {
@@ -419,36 +427,124 @@ export async function getMonthlySchedulingBySponsor(
       };
       groups.set(sid, g);
     }
-    const linked = d.sponsor_subscription_id != null; // contracted, not an extra
+    return g;
+  };
+
+  // Actual deliverables: count "done" (scheduled/published) and list unscheduled.
+  for (const d of rows) {
+    const g = ensure(d.sponsor_id as string);
     const sched = isScheduled(d);
-    if (linked) g.required += 1;
-    if (sched) g.done += 1;
-    if (linked && !sched) g.remaining += 1;
+    const type = d.deliverable_type as DeliverableType;
     if (!sched) {
       g.unscheduled.push({
         id: d.id as string,
-        deliverable_type: d.deliverable_type as DeliverableType,
-        sponsorId: sid,
+        deliverable_type: type,
+        sponsorId: d.sponsor_id as string,
         sponsorName: g.sponsorName,
         service_month: d.service_month as string,
         due_date: (d.due_date as string | null) ?? null,
       });
     }
-    const t = g.byType.find((x) => x.deliverable_type === d.deliverable_type);
+    const t = g.byType.find((x) => x.deliverable_type === type);
     if (t) {
-      if (linked) t.required += 1;
       if (sched) t.done += 1;
     } else {
-      g.byType.push({
-        deliverable_type: d.deliverable_type as DeliverableType,
-        required: linked ? 1 : 0,
-        done: sched ? 1 : 0,
+      g.byType.push({ deliverable_type: type, required: 0, done: sched ? 1 : 0 });
+    }
+  }
+
+  // Required: the contracted quantity per type for this month, from each
+  // sponsor's active subscription (package rules merged with overrides).
+  const sponsorIds = [...groups.keys()];
+  if (sponsorIds.length > 0) {
+    const { data: subs } = await supabase
+      .from("sponsor_subscriptions")
+      .select("id, sponsor_id, package_id, start_date, end_date")
+      .eq("status", "active")
+      .in("sponsor_id", sponsorIds);
+    const subList = subs ?? [];
+    const pkgIds = [
+      ...new Set(subList.map((s) => s.package_id).filter(Boolean) as string[]),
+    ];
+    const subIds = subList.map((s) => s.id as string);
+
+    const [{ data: rules }, { data: overrides }] = await Promise.all([
+      pkgIds.length
+        ? supabase
+            .from("package_deliverable_rules")
+            .select("package_id, deliverable_type, quantity, recurrence")
+            .in("package_id", pkgIds)
+        : Promise.resolve({ data: [] as unknown[] }),
+      subIds.length
+        ? supabase
+            .from("subscription_deliverable_overrides")
+            .select("sponsor_subscription_id, deliverable_type, quantity, recurrence")
+            .in("sponsor_subscription_id", subIds)
+        : Promise.resolve({ data: [] as unknown[] }),
+    ]);
+
+    const rulesByPkg = new Map<string, RuleInput[]>();
+    for (const r of (rules ?? []) as Record<string, unknown>[]) {
+      const key = r.package_id as string;
+      const arr = rulesByPkg.get(key) ?? [];
+      arr.push({
+        deliverable_type: r.deliverable_type as DeliverableType,
+        quantity: r.quantity as number,
+        recurrence: r.recurrence as Recurrence,
       });
+      rulesByPkg.set(key, arr);
+    }
+    const ovBySub = new Map<string, RuleInput[]>();
+    for (const o of (overrides ?? []) as Record<string, unknown>[]) {
+      const key = o.sponsor_subscription_id as string;
+      const arr = ovBySub.get(key) ?? [];
+      arr.push({
+        deliverable_type: o.deliverable_type as DeliverableType,
+        quantity: o.quantity as number,
+        recurrence: o.recurrence as Recurrence,
+      });
+      ovBySub.set(key, arr);
+    }
+
+    for (const sub of subList) {
+      const g = groups.get(sub.sponsor_id as string);
+      if (!g || !sub.start_date) continue;
+      const startMonth = toServiceMonth(sub.start_date as string);
+      const monthsSince = monthsBetween(startMonth, targetMonth);
+      if (monthsSince < 0) continue;
+      if (
+        sub.end_date &&
+        monthsBetween(targetMonth, toServiceMonth(sub.end_date as string)) < 0
+      ) {
+        continue;
+      }
+      const effective = resolveEffectiveDeliverables(
+        rulesByPkg.get(sub.package_id as string) ?? [],
+        ovBySub.get(sub.id as string) ?? [],
+      );
+      for (const e of effective) {
+        if (e.quantity <= 0) continue;
+        if (!recurrenceApplies(e.recurrence, monthsSince)) continue;
+        const t = g.byType.find((x) => x.deliverable_type === e.deliverable_type);
+        if (t) t.required += e.quantity;
+        else
+          g.byType.push({
+            deliverable_type: e.deliverable_type,
+            required: e.quantity,
+            done: 0,
+          });
+      }
     }
   }
 
   for (const g of groups.values()) {
-    g.over = Math.max(0, g.done - g.required);
+    g.required = g.byType.reduce((s, t) => s + t.required, 0);
+    g.done = g.byType.reduce((s, t) => s + t.done, 0);
+    g.over = g.byType.reduce((s, t) => s + Math.max(0, t.done - t.required), 0);
+    g.remaining = g.byType.reduce(
+      (s, t) => s + Math.max(0, t.required - t.done),
+      0,
+    );
   }
 
   return [...groups.values()].sort((a, b) => {
