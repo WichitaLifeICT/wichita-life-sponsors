@@ -572,9 +572,12 @@ export function CalendarBoard({
                         </Button>
                       </div>
                       <p className="text-xs text-muted-foreground">
-                        Creates a {chipLabel(manageSlot)} deliverable for this
-                        month and schedules it here — for a pulled-forward or
-                        extra placement, no existing deliverable needed.
+                        Creates a new {chipLabel(manageSlot)} deliverable for
+                        this month and schedules it here — good for an extra /
+                        good-will placement. Note: this adds a new one; to use up
+                        a future month&apos;s owed ad instead, pick it from{" "}
+                        <strong>Assign a deliverable</strong> above (it shows the
+                        month it&apos;s owed).
                       </p>
                     </div>
                   )}
